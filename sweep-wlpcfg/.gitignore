@@ -1,0 +1,9 @@
+/.settings/
+/.project
+/servers/*/apps
+/servers/*/logs
+/servers/*/workarea
+/servers/*/lib
+/servers/.pid
+/build/
+/servers/.classCache

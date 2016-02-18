@@ -1,0 +1,10 @@
+apply plugin: 'eclipse'
+
+task copyWAR(type: Copy) {
+    from '../mediator-app/build/libs/mediator-app-1.0.war'
+    into 'servers/gameon-mediator/apps/'
+    rename("mediator-app-1.0.war", "mediator-app.war")
+}
+
+task build(dependsOn: ['copyWAR']){
+}
