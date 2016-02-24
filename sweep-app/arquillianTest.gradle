@@ -1,0 +1,56 @@
+// Setup liberty server to be used in the test
+liberty {
+	install {
+		licenseCode = 'L-MCAO-9SYMVC'
+		type = 'javaee7'
+	}
+}
+
+// Separate arquillian test code into a new source set, it needs to include the output from the main source set so that it can run shrink wrap
+sourceSets {
+    arquillianTest {
+        java {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+        }
+    }
+}
+
+dependencies {
+    arquillianTestCompile configurations.testCompile
+    arquillianTestRuntime configurations.testRuntime
+    
+    // Also include in the compile the Arquillian JAR that contains the code to start and stop the server
+    arquillianTestCompile 'org.jboss.arquillian.container:arquillian-wlp-managed-8.5:1.0.0.Beta2'
+    arquillianTestCompile 'org.jboss.arquillian.junit:arquillian-junit-container:1.1.10.Final'
+    
+    // Arquillian uses some com.sun.x classes from the tools.jar so include this
+    arquillianTestCompile files("${System.properties['java.home']}/../lib/tools.jar")
+}
+
+// Make sure Eclipse generates the classpath to include the arquillian JAR
+eclipse {
+    classpath {
+        plusConfigurations += [configurations.arquillianTestCompile]
+    }
+}
+
+task setupServer(type: Copy) {
+    description 'Sets up the server for Arquillian to use'
+    from sourceSets.arquillianTest.output.resourcesDir
+    into file("${project.buildDir}/wlp/usr/servers/arquillianTestserver")
+}
+
+// Add a task to run the test that also passes the location of the liberty install via a system property
+task arquillianTest(type: Test, dependsOn: ['war', 'installLiberty']) {
+    group 'Verification'
+    description 'Runs the functional verification tests by using a JUnit rule to start and stop the liberty server prior to running all the tests.'
+    testClassesDir = sourceSets.arquillianTest.output.classesDir
+    classpath = sourceSets.arquillianTest.runtimeClasspath
+    systemProperties = ['liberty.install.dir': "${project.buildDir}/wlp", 'jackson.path': configurations.jackson.asPath]
+    dependsOn setupServer
+    reports.html.destination = file("$buildDir/reports/arquillianTest")
+    reports.junitXml.destination = file("$buildDir/test-results/arquillianTest")
+}
+
+check.dependsOn arquillianTest

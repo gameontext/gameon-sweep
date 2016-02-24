@@ -4,6 +4,6 @@
 /.project
 /.settings
 /src/main/webapp/META-INF/
-
+/target
 /bin/
 /build
