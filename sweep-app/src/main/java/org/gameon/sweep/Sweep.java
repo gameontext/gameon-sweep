@@ -1,19 +1,19 @@
 package org.gameon.sweep;
 
-import org.gameon.sweep.model.Room;
+import org.gameon.sweep.model.Site;
 
 public class Sweep {
 
-    private final RoomNavigator navigator;
+    private final SiteNavigator navigator;
     private final RoomCommunicator communicator;
 
-    public Sweep(RoomNavigator navigator, RoomCommunicator communicator) {
+    public Sweep(SiteNavigator navigator, RoomCommunicator communicator) {
         this.navigator = navigator;
         this.communicator = communicator;
     }
 
-    public void visitNextRoom() {
-        Room nextRoom = navigator.goToNextRoom();
+    public void visitNextSite() {
+        Site nextRoom = navigator.goToNextSite();
         communicator.sayHello(nextRoom);
     }
 

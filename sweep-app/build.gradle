@@ -3,6 +3,9 @@ apply plugin: 'eclipse-wtp'
 
 sourceCompatibility = 1.8
 
+configurations {
+    jackson
+}
 
 dependencies {
     providedCompile group:'javax.ws.rs', name:'javax.ws.rs-api', version:'2.0'
@@ -14,7 +17,8 @@ dependencies {
 
     runtime 'org.slf4j:slf4j-jdk14:1.7.13'
     
-    compile 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.2.2'
+    jackson 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.2.2'
+    compile configurations.jackson.dependencies
     
     testCompile 'junit:junit:4.12'
     testCompile 'org.jmock:jmock-junit4:2.8.2'
@@ -44,3 +48,14 @@ eclipse.jdt.file {
       it['org.eclipse.jdt.core.formatter.indent_switchstatements_compare_to_switch'] = 'true'
     }
 }
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.wasdev.wlp.gradle.plugins:liberty-gradle-plugin:1.0'
+    }
+}
+apply plugin: 'liberty'
+apply from: 'arquillianTest.gradle'

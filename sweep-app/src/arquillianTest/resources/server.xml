@@ -1,0 +1,13 @@
+<server description="The server to run Arquillian tests on - requires local connector">
+
+    <!-- Enable features -->
+    <featureManager>
+        <feature>servlet-3.1</feature>
+        <feature>localConnector-1.0</feature>
+    	<feature>jaxrs-2.0</feature>
+	    <feature>jndi-1.0</feature>
+    </featureManager>
+    
+    <jndiEntry jndiName="mapUrl" value="http://localhost:9081/test/fakeMap"/>
+    <httpEndpoint httpPort="9081" httpsPort="9444" id="defaultHttpEndpoint"/>
+</server>
