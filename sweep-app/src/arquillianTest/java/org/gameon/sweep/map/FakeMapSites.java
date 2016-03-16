@@ -20,7 +20,7 @@ public class FakeMapSites extends Application {
 
     private static List<JsonNode> sites = new ArrayList<>();
 
-    public static void produceSite(JsonNode site) {
+    public static void produce(JsonNode site) {
         sites.clear();
         sites.add(site);
     }
@@ -28,8 +28,10 @@ public class FakeMapSites extends Application {
     @GET
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response listAll(@QueryParam("owner") String owner, @QueryParam("name") String name) {
-        System.out.println(sites.toString());
+    public Response listAll(@QueryParam("owner") String owner,
+                            @QueryParam("name") String name) {
+        System.out.println("Fake map is returning: "
+                           + sites.toString());
         return Response.ok().entity(sites.toString()).build();
     }
 

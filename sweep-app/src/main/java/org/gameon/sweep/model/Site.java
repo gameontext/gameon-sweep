@@ -7,16 +7,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Site {
 
-    public final String siteId;
+    public final String id;
 
     @JsonCreator
     public Site(@JsonProperty("_id") String siteId) {
-        this.siteId = siteId;
+        this.id = siteId;
     }
 
     @Override
     public String toString() {
-        return "Room [roomId=" + siteId + "]";
+        return "Site [id=" + id + "]";
     }
 
 }

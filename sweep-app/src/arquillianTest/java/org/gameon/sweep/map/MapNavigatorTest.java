@@ -26,7 +26,8 @@ public class MapNavigatorTest {
 
     @Deployment()
     public static WebArchive createDeployment() {
-        WebArchive archive = ShrinkWrap.create(WebArchive.class, "test.war");
+        WebArchive archive = ShrinkWrap.create(WebArchive.class,
+                                               "test.war");
         archive = addClassesUnderTest(archive);
         archive = addFakeMapSites(archive);
         exportArchiveWar(archive);
@@ -34,19 +35,21 @@ public class MapNavigatorTest {
     }
 
     private static WebArchive addClassesUnderTest(WebArchive toArchive) {
-        toArchive = toArchive.addClasses(MapNavigator.class, Site.class, SiteNavigator.class);
+        toArchive = toArchive.addClasses(MapNavigator.class,
+                                         Site.class,
+                                         SiteNavigator.class);
         return addJacksonDependencies(toArchive);
     }
 
     private static WebArchive addJacksonDependencies(WebArchive toArchive) {
-        File[] jacksonDependencies = pathAsFiles(System.getProperty("jackson.path"));
+        File[] jacksonDependencies =
+                        pathAsFiles(System.getProperty("jackson.path"));
         return toArchive.addAsLibraries(jacksonDependencies);
     }
 
     private static File[] pathAsFiles(String path) {
         System.out.println(Arrays.asList(path));
         String[] pathElements = path.split(";");
-        System.out.println(Arrays.asList(pathElements));
         return Arrays.stream(pathElements).map(File::new).toArray(File[]::new);
     }
 
@@ -56,21 +59,25 @@ public class MapNavigatorTest {
     }
 
     private static WebArchive addModelBuilders(WebArchive toArchive) {
-        return toArchive.addClasses(SiteBuilder.class, RoomBuilder.class, ExitsBuilder.class,
-                                    CoordinatesBuilder.class, NodeBuilder.class);
+        return toArchive.addClasses(SiteBuilder.class,
+                                    RoomBuilder.class,
+                                    ExitsBuilder.class,
+                                    CoordinatesBuilder.class,
+                                    NodeBuilder.class);
     }
 
     private static void exportArchiveWar(WebArchive archive) {
-        archive.as(ZipExporter.class).exportTo(new File("build/test.war"), true);
+        archive.as(ZipExporter.class).exportTo(new File("build/test.war"),
+                                               true);
     }
 
     @Test
-    public void testServletWithName() throws Exception {
+    public void goesToNextSiteFromMap() throws Exception {
         String testId = "expectedTestId";
-        FakeMapSites.produceSite(aSite().withId(testId).build());
+        FakeMapSites.produce(aSite().withId(testId).build());
         MapNavigator navigator = new MapNavigator();
-        Site room = navigator.goToNextSite();
-        assertEquals(testId, room.siteId);
+        Site site = navigator.goToNextSite();
+        assertEquals(testId, site.id);
     }
 
 }
