@@ -1,4 +1,1 @@
-include 'sweep-app'
-include 'sweep-wlpcfg'
-
 rootProject.name='gameon-sweep'
