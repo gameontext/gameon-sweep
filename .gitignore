@@ -4,3 +4,5 @@
 .settings
 /bin
 /build
+/src/actions/checkSite/dist
+/src/actions/checkSite/node_modules

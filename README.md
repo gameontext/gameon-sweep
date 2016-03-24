@@ -14,15 +14,17 @@ I've started working on the action to load the rooms and connect via a web socke
 
 * `src/actions/loadSites`: This contains the code to load the sites and connect to the other action that connects via a web socket to the site.  Currently it needs to have the following TODOs:
   * Tests
-  * Having a count that counts all the outbound action invocations and when it gets to zero calls whisk.done()
   * Doing something with the results from the invocations to the web socket
+  * Add the location of the web socket to the params.  Currently the map doesn't return this so need some special auth for the NPC to say we're allowed to get it.
 * `src/actions/checkSite`: This contains the code to create a web socket.  Whisk only allows a single JavaScript file but we need to use the nodejs-websocket node library.  Luckily there is a webpack thing that you can use in node to transform this into a single file which is done by calling:
 
         npm run build
 
    as per the article [here.](https://developer.ibm.com/openwhisk/2016/03/17/bundling-openwhisk-actions-with-webpack/)  TODOs:
   * Tests
+  * Actually connect to the ws supplied in the params.
   * Actually do some checks on the web socket connection
+  * This seems to fail regularly.  It says that it isn't returning a valid JSON object.  I'm not sure what happens here, I tried to put a try catch around the connection but that isn't being triggered.  It may be that it's the other end of the web socket that has an error or it just times out or something.  As the load sites doesn't pass in a ws address it just connects to the web socket sample that I am hosting on my own Bluemix account.
   
 To get these into whisk you need to setup your whisk CLI as described in the [Bluemix documentation](https://new-console.ng.bluemix.net/openwhisk/cli).  In addition you need to set the namespace to the one that Whisk will use by default (for me this was iain.duncan@uk.ibm.com).  Do this with the following and then [create the actions](https://new-console.ng.bluemix.net/docs/openwhisk/openwhisk_actions.html#openwhisk_create_action_js):
 
@@ -32,7 +34,7 @@ To get these into whisk you need to setup your whisk CLI as described in the [Bl
 
 You can then manually trigger the chain with the following:
 
-    wsk action invoke loadSites
+    wsk action invoke loadSites --blocking --result
 
 In addition you can create a trigger to [run this](https://new-console.ng.bluemix.net/docs/openwhisk/openwhisk_triggers_rules.html#openwhisk_rules) every hour with the [following](https://new-console.ng.bluemix.net/docs/openwhisk/openwhisk_catalog.html#openwhisk_catalog_alarm) (note this is slightly different to the docs which I believe are wrong and would run the trigger 60 times every hour, also on Windows ' give an error on the params whereas " do not):
 
