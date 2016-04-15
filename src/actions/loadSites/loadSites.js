@@ -1,9 +1,9 @@
  var request = require('request');
+ var DEFAULT_SITES_URL = 'https://game-on.org/map/v1/sites';
 
  function main() {
-     var url = 'https://game-on.org/map/v1/sites';
 
-     request.get(url, allSitesResponseHandler);
+     request.get(buildGetSitesOptions(), allSitesResponseHandler);
 
      return whisk.async();
 }
@@ -46,4 +46,14 @@ function allSitesResponseHandler(error, response, body) {
             next: onResponse(index)
         });
     });
+}
+
+function buildGetSitesOptions(params) {
+	var url;
+	if (params && params.mapSitesUrl) {
+		url = params.mapSitesUrl;
+	} else {
+		url = DEFAULT_SITES_URL;
+	}
+	return {url: url};
 }
