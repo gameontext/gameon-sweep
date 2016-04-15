@@ -60,7 +60,13 @@ describe('Load sites', function() {
 			assert.equal(result.url, 'https://game-on.org/map/v1/sites');
 		});
 		it.skip('should include the HMAC header and associated information', function() {
-			
+			var npcId = "testNpcId";
+			var npcApiKey = "testNpcApiKey";
+			var result = buildGetSitesOptions({'npcId': npcId, 'npcApiKey': npcApiKey});
+			assert.equal(result.headers.gameon-id, npcId);
+			assert(result.headers.gameon-date);
+			Date.parse(result.headers.gameon-date);
+			assert.equal(result.headers.gameon-signature, 'something');
 		});
 	});
 });
