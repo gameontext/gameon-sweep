@@ -1,7 +1,5 @@
 const assert = require('assert');
-var async = require('async');
 var invokedParams = [];
-var sleep = require("sleep");
 var asyncCalled =  false;
 var doneCalled = false;
 whisk = {
