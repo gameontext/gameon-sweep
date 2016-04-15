@@ -1,14 +1,14 @@
 {
-  "name": "ws-web-packed",
+  "name": "check-site",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "checkSite.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack --config webpack-config.js --progress --colors"
   },
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "devDependencies": {
     "babel-core": "^6.7.4",
     "babel-loader": "^6.2.4",
