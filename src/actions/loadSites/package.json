@@ -1,0 +1,17 @@
+{
+  "name": "load-sites",
+  "version": "1.0.0",
+  "description": "",
+  "main": "loadSites.js",
+  "scripts": {
+    "test": "mocha *Test.js"
+  },
+  "dependencies": {
+    "request": "^2.71.0"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "mocha": "^2.4.5"
+  }
+}
