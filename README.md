@@ -13,7 +13,6 @@ The rough plan is that there will be (at least) two actions.  The first will go 
 I've started working on the action to load the rooms and connect via a web socket.  There are a few caveats with each:
 
 * `src/actions/loadSites`: This contains the code to load the sites and connect to the other action that connects via a web socket to the site.  Currently it needs to have the following TODOs:
-  * Tests
   * Doing something with the results from the invocations to the web socket
   * Add the location of the web socket to the params.  Currently the map doesn't return this so need some special auth for the NPC to say we're allowed to get it.
 * `src/actions/checkSite`: This contains the code to create a web socket.  Whisk only allows a single JavaScript file but we need to use the nodejs-websocket node library.  Luckily there is a webpack thing that you can use in node to transform this into a single file which is done by calling:
@@ -21,7 +20,7 @@ I've started working on the action to load the rooms and connect via a web socke
         npm run build
 
    as per the article [here.](https://developer.ibm.com/openwhisk/2016/03/17/bundling-openwhisk-actions-with-webpack/)  TODOs:
-  * Tests
+  * Tests (see the example using mocha on load sites)
   * Actually connect to the ws supplied in the params.
   * Actually do some checks on the web socket connection
   * This seems to fail regularly.  It says that it isn't returning a valid JSON object.  I'm not sure what happens here, I tried to put a try catch around the connection but that isn't being triggered.  It may be that it's the other end of the web socket that has an error or it just times out or something.  As the load sites doesn't pass in a ws address it just connects to the web socket sample that I am hosting on my own Bluemix account.

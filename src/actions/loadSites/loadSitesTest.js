@@ -48,4 +48,29 @@ describe('Load sites', function() {
 			assert(doneCalled);
 		});
 	});
+	
+	describe('#buildGetSitesOptions', function() {
+		it('should add the url from params to the options', function() {
+			var testUrl = 'http://example.com/sites';
+			var result = buildGetSitesOptions({'mapSitesUrl': testUrl, 'sweepId': 'sweep', 'sweepApiKey': 'sweepApi'});
+			assert.equal(result.url, testUrl);
+		});
+		it('should use a default URL if none is provided', function() {
+			var result = buildGetSitesOptions({'sweepId': 'sweep', 'sweepApiKey': 'sweepApi'});
+			assert.equal(result.url, 'https://game-on.org/map/v1/sites');
+		});
+		it('should include the HMAC header and associated information', function() {
+			var npcId = "testNpcId";
+			var npcApiKey = "testNpcApiKey";
+			var result = buildGetSitesOptions({'sweepId': npcId, 'sweepApiKey': npcApiKey});
+			assert.equal(result.headers['gameon-id'], npcId);
+			assert(result.headers['gameon-date']);
+			Date.parse(result.headers['gameon-date']);
+			assert(result.headers['gameon-signature']);
+		});
+		it('should not include security headers if parameters not passed in', function() {
+			var result = buildGetSitesOptions();
+			assert(!result.headers);
+		});
+	});
 });
