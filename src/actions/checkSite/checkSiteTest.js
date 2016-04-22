@@ -12,8 +12,8 @@ describe('Check sites', function() {
 		});
 	});
 	describe('#getHeaders', function() {
-		it('should not have any headers if there is no secret in the params', function() {
-			assert(!getWsConnectOptions());
+		it('should add the protocol header', function() {
+			assert.equal(getWsConnectOptions().extraHeaders['gameon-protocol'], 'mediator,1.1');
 		});
 		it.skip('should have extra headers in the options when there is a secret in the params', function() {
 			assert(getWsConnectionOptions({'connectionSecret':'a secret'}).extraHeaders);

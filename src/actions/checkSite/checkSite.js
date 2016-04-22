@@ -1,4 +1,5 @@
-var ws = require("nodejs-websocket")
+var ws = require("nodejs-websocket");
+const PROTOCOL = 'mediator,1.1';
 global.main = function(params) {
     console.log("Creating web socket for " + params.id + " with name " + params.name);
     
@@ -27,5 +28,5 @@ function getConnectionLocation(params) {
 }
 
 function getWsConnectOptions(params) {
-	
+	return { 'extraHeaders': {'gameon-protocol': PROTOCOL}}
 }
