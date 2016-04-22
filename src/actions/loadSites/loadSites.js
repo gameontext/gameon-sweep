@@ -47,6 +47,11 @@ function allSitesResponseHandler(error, response, body) {
 		}
 		if (site.info != null) {
 			siteInformation.name = site.info.name;
+			if (site.info.connectionDetails != null) {
+				siteInformation.connectionLocation = site.info.connectionDetails.target;
+				siteInformation.connectionType = site.info.connectionDetails.type;
+				siteInformation.connectionSecret = site.info.connectionDetails.token;
+			}
 		}
 		whisk.invoke({
 			name : 'checkSite',
