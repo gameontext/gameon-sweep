@@ -2,8 +2,7 @@ var ws = require("nodejs-websocket")
 global.main = function(params) {
     console.log("Creating web socket for " + params.id + " with name " + params.name);
     
-    // TODO get ws location from params as well
-    var wsLocation = params.connectionLocation ? params.connectionLocation : "ws://testwebsocket.mybluemix.net/sample.javaee7.websocket/SimpleAnnotated"; 
+    var wsLocation = getConnectionLocation(params); 
     
     try {
     	var connection = ws.connect(wsLocation);
@@ -22,3 +21,11 @@ global.main = function(params) {
 
     return whisk.async();
 };
+
+function getConnectionLocation(params) {
+	return params.connectionLocation;
+}
+
+function getWsConnectOptions(params) {
+	
+}

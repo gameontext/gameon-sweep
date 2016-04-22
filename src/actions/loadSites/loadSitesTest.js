@@ -1,26 +1,8 @@
 const assert = require('assert');
-var invokedParams = [];
-var asyncCalled =  false;
-var doneCalled = false;
-whisk = {
-	'async' : function() {
-		console.log("Called async");
-		asyncCalled = true;
-	},
-	'invoke' : function(params) {
-		console.log("Invoke called with " + JSON.stringify(params));
-		invokedParams.push(params);
-		if (params.next) {
-			params.next(null, {'result': 'OK'});
-		}
-	},
-	'done' : function() {
-		doneCalled = true;
-	}
-}
 
 var fs = require("fs");
 eval(fs.readFileSync(__dirname + '/loadSites.js')+'');
+eval(fs.readFileSync(__dirname + '/../../common/fakeWhisk.js')+'');
 
 describe('Load sites', function() {
 	describe('#allSitesResponseHandler', function() {
@@ -35,13 +17,29 @@ describe('Load sites', function() {
 		it('should pass the correct params to whisk.invoke', function() {
 			var testId = 'testId';
 			var testName = 'testName';
-			allSitesResponseHandler(null, null, JSON.stringify([{'_id': testId, 'info': {'name': testName}}]));
+			var testConnectionSecret = 'testSecret';
+			var testConnectionLocation = 'ws://testlocation';
+			var testConnectionType = 'websocket';
+			allSitesResponseHandler(null, null, JSON.stringify([{
+																	'_id': testId, 
+																	'info': {
+																		'name': testName, 
+																		'connectionDetails': {
+																			'type':testConnectionType,
+																			'target':testConnectionLocation,
+																			'token':testConnectionSecret
+																		}
+																	}
+																}]));
 			var params = invokedParams[0];
 			assert.equal(params.name, 'checkSite');
 			assert(params.blocking);
 			assert(params.next);
 			assert.equal(params.parameters.id, testId);
 			assert.equal(params.parameters.name, testName);
+			assert.equal(params.parameters.connectionType, testConnectionType);
+			assert.equal(params.parameters.connectionSecret, testConnectionSecret);
+			assert.equal(params.parameters.connectionLocation, testConnectionLocation);
 		});
 		it('should call whisk done when complete', function() {
 			allSitesResponseHandler(null, null, JSON.stringify([{'_id': 'first'}, {'_id': 'second'}]));
