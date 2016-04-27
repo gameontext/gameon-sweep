@@ -17,16 +17,36 @@ whisk = {
 	'async' : function() {
 		console.log("Called async");
 	},
-	'invoke' : function(params) {
-		console.log("Called invoke with: " + JSON.stringify(params));
+	'done' : function() {
+		console.log("Called done");
 	}
 }
 
 var fs = require("fs")
 var vm = require('vm')
-eval(fs.readFileSync(__dirname + '/loadSites.js') + '');
-main({
-	'mapSitesUrl' : 'http://127.0.0.1:9099/map/v1/sites',
-	'sweepId' : 'sweep',
-	'sweepApiKey' : 'sweepSecret'
-});
+eval(fs.readFileSync(__dirname + '/checkSite.js') + '');
+var basement = {
+	"id" : "df99a72468db3c9b03f5c85f05000f3a",
+	"name" : "Basement",
+	"connectionLocation" : "ws://127.0.0.1:9080/rooms/ws/Basement",
+	"connectionType" : "websocket"
+};
+var recRoom = {
+	"id" : "df99a72468db3c9b03f5c85f05001d29",
+	"name" : "RecRoom",
+	"connectionLocation" : "ws://127.0.0.1:9080/rooms/ws/RecRoom",
+	"connectionType" : "websocket",
+	"connectionSecret" : "kayleigh"
+};
+var mugRoom = {
+	"id" : "df99a72468db3c9b03f5c85f05003699",
+	"name" : "MugRoom",
+	"connectionLocation" : "ws://127.0.0.1:9080/rooms/ws/MugRoom",
+	"connectionType" : "websocket"
+};
+console.log('Calling main for basement');
+main(basement);
+console.log('Calling main for rec room');
+main(recRoom);
+console.log('Calling main for mug room');
+main(recRoom);
