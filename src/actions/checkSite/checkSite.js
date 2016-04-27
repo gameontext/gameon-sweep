@@ -3,7 +3,7 @@ global.main = function(params) {
     console.log("Creating web socket for " + params.id + " with name " + params.name);
     
     // TODO get ws location from params as well
-    var wsLocation = params.wsLocation ? params.wsLocation : "ws://testwebsocket.mybluemix.net/sample.javaee7.websocket/SimpleAnnotated"; 
+    var wsLocation = params.connectionLocation ? params.connectionLocation : "ws://testwebsocket.mybluemix.net/sample.javaee7.websocket/SimpleAnnotated"; 
     
     try {
     	var connection = ws.connect(wsLocation);
