@@ -44,9 +44,9 @@ var mugRoom = {
 	"connectionLocation" : "ws://127.0.0.1:9080/rooms/ws/MugRoom",
 	"connectionType" : "websocket"
 };
-console.log('Calling main for basement');
-main(basement);
+//console.log('Calling main for basement');
+//main(basement);
 console.log('Calling main for rec room');
 main(recRoom);
-console.log('Calling main for mug room');
-main(recRoom);
+//console.log('Calling main for mug room');
+//main(recRoom);

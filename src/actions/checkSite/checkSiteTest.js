@@ -41,4 +41,16 @@ describe('Check sites', function() {
 	describe('#createOnConnectHandler', function() {
 		
 	});
+	describe('#parseText', function() {
+	    it('should get the object and an array of routing information', function() {
+	        var parsedText = parseText('a,b,{"property":"value"}');
+	        assert.deepEqual(parsedText.routingInformation, ['a', 'b']);
+	        assert.equal(parsedText.object.property, "value");
+	    });
+	    it('should accept no routing information', function() {
+	        var parsedText = parseText('{"property":"value"}');
+            assert(!parsedText.routingInformation);
+            assert.equal(parsedText.object.property, "value");
+	    });
+	});
 });
