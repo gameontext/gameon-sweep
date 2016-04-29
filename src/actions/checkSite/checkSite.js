@@ -21,6 +21,7 @@ function createCommandRunner(commands) {
     var commandRunner = {
             commands : commands,
             commandRunChecker : null,
+            connection : undefined,
             score : 0,
             lastRunCommand: -1,
             start: function() {
@@ -37,7 +38,7 @@ function createCommandRunner(commands) {
             runCurrentCommand: function() {
                 var commandToRun = this.commands[this.lastRunCommand];
                 console.log("Running command " + commandToRun.description);
-                commandToRun.execute(this.connectionCallback);
+                commandToRun.execute(this.connection, this.connectionCallback);
                 this.waitForChecks(commandToRun);
             },
             waitForChecks: function(commandToRun) {
@@ -55,6 +56,7 @@ function createCommandRunner(commands) {
                 whisk.done({score: this.score});
             },
             connectionCallback: function(connection) {
+                commandRunner.connection = connection;
                 commandRunner.commandRunChecker = createCommandHasRunChecker(connection);
             },
             messageReceivedCallback: function(time) {
@@ -143,7 +145,7 @@ function createConnectCommand(params) {
     return {
         params : params,
         description : 'Connecting to web socket and waiting for ack message',
-        execute : function(connectionCreatedCallback) {
+        execute : function(nullConnection, connectionCreatedCallback) {
             connection = ws.connect(wsLocation, getWsConnectionOptions());
         },
         getWsConnectionOptions : function() {

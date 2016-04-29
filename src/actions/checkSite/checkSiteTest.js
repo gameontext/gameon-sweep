@@ -32,7 +32,7 @@ describe('CommandRunner', function() {
     var testObject;
     var hasExecutedCommand;
     var fakeCommandThatRegistersConnection = {
-            execute: function(connectionCreatedCallback) {
+            execute: function(connection, connectionCreatedCallback) {
                 connectionCreatedCallback(fakeConnection);
                 hasExecutedCommand = true;
             },
@@ -99,11 +99,14 @@ describe('CommandRunner', function() {
     });
     describe('Two commands running', function() {
         var hasRunSecondCommand = false;
+        var connectionPassedToSecondCommand = undefined;
         beforeEach(function() {
             hasRunSecondCommand = false;
+            connectionPassedToSecondCommand = undefined;
             var fakeCommandThatJustReturnsTrue = {
-                    execute: function() {
+                    execute: function(connection) {
                         hasRunSecondCommand = true;
+                        connectionPassedToSecondCommand = connection;
                     },
                     checkText: function() {
                         return true;
@@ -117,6 +120,7 @@ describe('CommandRunner', function() {
            fakeConnection.callback();
            assert(hasExecutedCommand);
            assert(hasRunSecondCommand);
+           assert.equal(connectionPassedToSecondCommand, fakeConnection);
            checkScore(200);
        });
        it('Gives a score of 70 if second command fails', function(done) {
@@ -249,7 +253,7 @@ describe('CommandHasRunChecker', function() {
         }, 1500)
     });
 });
-describe.only('connectCommand', function() {
+describe('connectCommand', function() {
     it('describes itself', function() {
         assert(createConnectCommand().description);
     });
