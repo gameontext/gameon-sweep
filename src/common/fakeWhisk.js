@@ -16,6 +16,7 @@
 var invokedParams = [];
 var asyncCalled =  false;
 var doneCalled = false;
+var doneParams = {};
 whisk = {
 	'async' : function() {
 		console.log("Called async");
@@ -28,7 +29,9 @@ whisk = {
 			params.next(null, {'result': 'OK'});
 		}
 	},
-	'done' : function() {
+	'done' : function(params) {
 		doneCalled = true;
+		console.log("Done called with " + JSON.stringify(params));
+		doneParams = params;
 	}
 }

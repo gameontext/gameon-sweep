@@ -19,34 +19,159 @@ var fs = require("fs");
 eval(fs.readFileSync(__dirname + '/checkSite.js')+'');
 eval(fs.readFileSync(__dirname + '/../../common/fakeWhisk.js')+'');
 
+var fakeConnection;
+fakeConnection = {
+    callback: null,
+    on(eventType, callback) {
+        if (eventType === "text") {
+            this.callback = callback;
+        }
+    }
+}
 describe('CommandRunner', function() {
-    it('runs a single command', function() {
-        var hasExecutedCommand = false;
-        var fakeCommand = {
-                execute: function() {
-                    hasExecutedCommand = true;
-                }
+    var testObject;
+    var hasExecutedCommand;
+    var fakeCommandThatRegistersConnection = {
+            execute: function(connectionCreatedCallback) {
+                console.log("Executed");
+                connectionCreatedCallback(fakeConnection);
+                hasExecutedCommand = true;
+            },
+            checkText: function() {
+                return true;
+            }
         };
-        var testObject = createCommandRunner([fakeCommand]);
-        testObject.start();
-        assert(hasExecutedCommand);
+    
+    beforeEach(function() {
+        DEFAULT_TIMEOUT = 1000;
+        hasExecutedCommand = false;
+        doneParams = {};
     });
-    it('checks that there is a response after a command executes', function() {
-        
+    var checkScore = function(expectedScore) {
+        assert(doneParams);
+        assert(doneParams.score);
+        assert.equal(doneParams.score, expectedScore);
+    }
+    describe('Single command running', function() {
+        beforeEach(function() {
+            testObject = createCommandRunner([fakeCommandThatRegistersConnection]);
+        });
+        it('runs a single command', function() {
+            testObject.start();
+            console.log("Testing has executed " + hasExecutedCommand);
+            assert(hasExecutedCommand);
+        });
+        it('gives a score of 100 for a successfully executed command', function() {
+            testObject.start();
+            fakeConnection.callback();
+            checkScore(100);
+        });
+        it('Does not double count', function() {
+            testObject.start();
+            fakeConnection.callback();
+            fakeConnection.callback();
+            checkScore(100);
+        });
+        it('gives a score of 99 if the command takes a second to run', function(done) {
+            DEFAULT_TIMEOUT = 1500;
+            testObject.start();
+            setTimeout(function() {
+                fakeConnection.callback();
+                checkScore(99);
+                done();
+            }, 1000);
+        });
+        it('only calls one command complete callback called it is triggered at the same time as the timeout', function(done) {
+            testObject.start();
+            setTimeout(function() {
+                fakeConnection.callback();
+                assert(doneParams);
+                assert(doneParams.score);
+                assert(!(doneParams.score === 69));
+                done();
+            }, 1000);
+        });
+        it('Gives a score of -30 for a dead command', function(done) {
+            testObject.start();
+            setTimeout(function() {
+                checkScore(-30);
+                done();
+            }, 1500);
+        });
+    });
+    describe('Two commands running', function() {
+        var hasRunSecondCommand = false;
+        beforeEach(function() {
+            hasRunSecondCommand = false;
+            var fakeCommandThatJustReturnsTrue = {
+                    execute: function() {
+                        hasRunSecondCommand = true;
+                    },
+                    checkText: function() {
+                        return true;
+                    }
+            }
+            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatJustReturnsTrue]);
+        });
+       it('Runs two valid commands and returns a score of 200', function() {
+           testObject.start();
+           fakeConnection.callback();
+           fakeConnection.callback();
+           assert(hasExecutedCommand);
+           assert(hasRunSecondCommand);
+           checkScore(200);
+       });
+       it('Gives a score of 70 if second command fails', function(done) {
+           testObject.start();
+           fakeConnection.callback();
+           setTimeout(function() {
+               assert(hasExecutedCommand);
+               assert(hasRunSecondCommand);
+               checkScore(70);
+               done();
+           }, 1500);
+       });
+       it('Does not call second command if first does not complete', function(done){
+           testObject.start();
+           setTimeout(function() {
+               assert(hasExecutedCommand);
+               assert(!hasRunSecondCommand);
+               checkScore(-30);
+               done();
+           }, 1500);
+       });
+    });
+    describe('A command with two expected messages', function() {
+        var hasRunSecondCommand = false;
+        beforeEach(function() {
+            hasRunSecondCommand = false;
+            var fakeCommandThatHasTwoExpectedTextMessages = {
+                    execute: function() {
+                        hasRunSecondCommand = true;
+                    },
+                    checkText: [function(routingInformation, object) {
+                        console.log("Called check text 1 with " + JSON.stringify(object));
+                        return "wibble" === object.value;
+                    }, function(routingInformation, object) {
+                        console.log("Called check text 2 with " + JSON.stringify(object));
+                        return "fish" === object.value;
+                    }]
+            }
+            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatHasTwoExpectedTextMessages]);
+        });
+        it('Gives a score for each check', function() {
+            testObject.start();
+            fakeConnection.callback();
+            fakeConnection.callback('{"value": "wibble"}');
+            fakeConnection.callback('{"value": "fish"}');
+            assert(hasExecutedCommand);
+            assert(hasRunSecondCommand);
+            checkScore(300);
+        });
     });
 });
+
 describe('CommandHasRunChecker', function() {
-    var fakeConnection;
-    beforeEach(function() {
-        fakeConnection = {
-            callback: null,
-            on(eventType, callback) {
-                if (eventType === "text") {
-                    this.callback = callback;
-                }
-            }
-        }
-    });
     it('waits until function is called', function() {
         var testObject = createCommandHasRunChecker(fakeConnection);
         var hasReportedMessageReceived = false;
@@ -72,11 +197,13 @@ describe('CommandHasRunChecker', function() {
         assert(hasReportedMessageReceived);
     });
     it('Times out if no text message is received', function(done) {
-        var testObject = createCommandHasRunChecker(fakeConnection, 1000);
+        DEFAULT_TIMEOUT = 1000;
+        var testObject = createCommandHasRunChecker(fakeConnection);
         testObject.waitForTextMessageFromConnection(null, null, done);
     });
     it('Does not call timeout if message is received', function(done) {
-        var testObject = createCommandHasRunChecker(fakeConnection, 500);
+        DEFAULT_TIMEOUT = 500;
+        var testObject = createCommandHasRunChecker(fakeConnection);
         setTimeout(done, 1500);
         testObject.waitForTextMessageFromConnection(function() {
                 return true;
@@ -98,5 +225,19 @@ describe('CommandHasRunChecker', function() {
         });
         fakeConnection.callback();
         assert(hasReportedMessageReceived);
+    });
+    it('Does not callback if the wrong message is received', function(done) {
+        DEFAULT_TIMEOUT = 1000;
+        var testObject = createCommandHasRunChecker(fakeConnection);
+        var timeoutCalled = false;
+        testObject.waitForTextMessageFromConnection(function() {
+            return false;
+        }, function() {
+            assert.fail(null, null, "Should not callback for the wrong message", null);
+        }, function() {timeoutCalled = true;});
+        setTimeout(function() {
+            assert(timeoutCalled);
+            done();
+        }, 1500)
     });
 });
