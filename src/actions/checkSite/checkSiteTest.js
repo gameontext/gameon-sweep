@@ -33,7 +33,6 @@ describe('CommandRunner', function() {
     var hasExecutedCommand;
     var fakeCommandThatRegistersConnection = {
             execute: function(connectionCreatedCallback) {
-                console.log("Executed");
                 connectionCreatedCallback(fakeConnection);
                 hasExecutedCommand = true;
             },
@@ -58,7 +57,6 @@ describe('CommandRunner', function() {
         });
         it('runs a single command', function() {
             testObject.start();
-            console.log("Testing has executed " + hasExecutedCommand);
             assert(hasExecutedCommand);
         });
         it('gives a score of 100 for a successfully executed command', function() {
@@ -150,11 +148,9 @@ describe('CommandRunner', function() {
                         hasRunSecondCommand = true;
                     },
                     checkText: [function(routingInformation, object) {
-                        console.log("Called check text 1 with " + JSON.stringify(object));
-                        return "wibble" === object.value;
+                        return object && "wibble" === object.value;
                     }, function(routingInformation, object) {
-                        console.log("Called check text 2 with " + JSON.stringify(object));
-                        return "fish" === object.value;
+                        return object && "fish" === object.value;
                     }]
             }
             testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatHasTwoExpectedTextMessages]);
@@ -167,6 +163,18 @@ describe('CommandRunner', function() {
             assert(hasExecutedCommand);
             assert(hasRunSecondCommand);
             checkScore(300);
+        });
+        it('Does not allow double counting of scores', function(done) {
+            testObject.start();
+            fakeConnection.callback();
+            fakeConnection.callback('{"value": "wibble"}');
+            fakeConnection.callback('{"value": "wibble"}');
+            assert(hasExecutedCommand);
+            assert(hasRunSecondCommand);
+            setTimeout(function() {
+                checkScore(170);
+                done();
+            }, 1500);
         });
     });
 });

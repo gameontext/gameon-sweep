@@ -24,9 +24,7 @@ function createCommandRunner(commands) {
                 this.runNextCommandOrFinish();
             },
             runNextCommandOrFinish: function() {
-                console.log("Previously ran " + this.lastRunCommand);
                 this.lastRunCommand++;
-                console.log("Working out if there is a command in position " + this.lastRunCommand + " in " + this.commands);
                 if (this.lastRunCommand < this.commands.length) {
                     this.runCurrentCommand();
                 } else {
@@ -35,6 +33,7 @@ function createCommandRunner(commands) {
             },
             runCurrentCommand: function() {
                 var commandToRun = this.commands[this.lastRunCommand];
+                console.log("Running command " + commandToRun.description);
                 commandToRun.execute(this.connectionCallback);
                 this.waitForChecks(commandToRun);
             },
@@ -56,13 +55,11 @@ function createCommandRunner(commands) {
                 commandRunner.commandRunChecker = createCommandHasRunChecker(connection);
             },
             messageReceivedCallback: function(time) {
-                console.log("Message received correctly");
                 var timePenalty = Math.round(time/1000);
                 commandRunner.score += (100 - timePenalty);
                 commandRunner.runNextCommandOrFinish();
             },
             timeoutCallback:  function(time) {
-                console.log("Message timed out");
                 commandRunner.score -= 30;
                 if (commandRunner.lastRunCommand === 0) {
                     commandRunner.reportDone();
@@ -77,52 +74,64 @@ function createCommandHasRunChecker(connection) {
     var commandHasRunChecker = {
         connection : connection,
         checks: [],
-        isThisTheRightMessage : null,
-        messageFoundCallback : null,
-        timeoutObj : null,
         timeout : DEFAULT_TIMEOUT,
-        startTime : null,
-        callbackCalled : false,
         waitForTextMessageFromConnection : function(isThisTheRightMessage, messageFoundCallback, timeoutCallback) {
-            console.log("Waiting for message with checker " + isThisTheRightMessage);
-            this.callbackCalled = false;
-            this.isThisTheRightMessage = isThisTheRightMessage;
-            this.messageFoundCallback = messageFoundCallback;
-            this.timeoutObj = setTimeout(function() {
-                commandHasRunChecker.callbackAfterCompletion(timeoutCallback);
-            }, this.timeout);
-            this.startTime = new Date();
-        },
-        callbackAfterCompletion(callbackFunction, params) {
-            if (!this.callbackCalled) {
-                this.callbackCalled = true;
-                callbackFunction(params);
+            var newCheck = {
+                 callbackCalled : false,
+                 isThisTheRightMessage : isThisTheRightMessage,
+                 messageFoundCallback : messageFoundCallback,
+                 startTime : new Date(),
+                 callbackAfterCompletion(callbackFunction, params) {
+                     if (!this.callbackCalled) {
+                         this.callbackCalled = true;
+                         callbackFunction(params);
+                     }
+                 },
             }
+            newCheck.timeoutObj = setTimeout(function() {
+                newCheck.callbackAfterCompletion(timeoutCallback);
+            }, this.timeout);
+            this.checks.push(newCheck);
+        },
+        messageReceived : function (text) {
+            var parsedText = this.parseText(text);
+            if (this.checks) {
+                var checkFound = undefined;
+                for(var i = 0 ; i < this.checks.length ; i++) {
+                    var check = this.checks[i];
+                    if (check.isThisTheRightMessage(parsedText.routingInformation, parsedText.object)) {
+                        checkFound = {
+                            position : i,
+                            check : check
+                        }
+                        break;
+                    }
+                }
+                if (checkFound) {
+                    this.checks.splice(checkFound.position, 1);
+                    clearTimeout(check.timeoutObj);
+                    check.callbackAfterCompletion(check.messageFoundCallback, new Date() - check.startTime);
+                }
+            }
+        },
+        parseText : function(text) {
+            if (!text) {
+                return {};
+            }
+            var curlyBracketIndex = text.indexOf('{');
+            var routingInformation = [];
+            var object;
+            if (curlyBracketIndex > 0) {
+                routingInformation = text.substring(0, curlyBracketIndex - 1).split(',');
+                object = JSON.parse(text.substring(curlyBracketIndex));
+            } else {
+                object = JSON.parse(text);
+            }
+            return {'routingInformation' : routingInformation, 'object': object};
         }
-    }
-    var parseText = function(text) {
-        if (!text) {
-            return {};
-        }
-        var curlyBracketIndex = text.indexOf('{');
-        var routingInformation = [];
-        var object;
-        if (curlyBracketIndex > 0) {
-            routingInformation = text.substring(0, curlyBracketIndex - 1).split(',');
-            object = JSON.parse(text.substring(curlyBracketIndex));
-        } else {
-            object = JSON.parse(text);
-        }
-        return {'routingInformation' : routingInformation, 'object': object};
     }
     connection.on("text", function(text) {
-        console.log("Have text message")
-        var parsedText = parseText(text);
-        if (commandHasRunChecker.isThisTheRightMessage && commandHasRunChecker.isThisTheRightMessage(parsedText.routingInformation, parsedText.object)) {
-            console.log("This is the right message");
-            clearTimeout(commandHasRunChecker.timeoutObj);
-            commandHasRunChecker.callbackAfterCompletion(commandHasRunChecker.messageFoundCallback, new Date() - commandHasRunChecker.startTime);
-        }
+        commandHasRunChecker.messageReceived(text);
     });
     return commandHasRunChecker;
 }
