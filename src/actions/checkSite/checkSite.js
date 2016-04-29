@@ -13,7 +13,10 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
+var ws = require("nodejs-websocket");
+var crypto = require("crypto");
 var DEFAULT_TIMEOUT = 20000;
+const PROTOCOL = 'mediator,1.1';
 function createCommandRunner(commands) {
     var commandRunner = {
             commands : commands,
@@ -134,6 +137,40 @@ function createCommandHasRunChecker(connection) {
         commandHasRunChecker.messageReceived(text);
     });
     return commandHasRunChecker;
+}
+
+function createConnectCommand(params) {
+    return {
+        params : params,
+        description : 'Connecting to web socket and waiting for ack message',
+        execute : function(connectionCreatedCallback) {
+            connection = ws.connect(wsLocation, getWsConnectionOptions());
+        },
+        getWsConnectionOptions : function() {
+            headers = {
+                'gameon-protocol' : PROTOCOL
+            };
+            if (this.params && this.params.connectionSecret) {
+                var now = new Date();
+                var timestamp = now.toISOString();
+
+                var hash = crypto.createHmac('sha256', this.params.connectionSecret).update(
+                        timestamp).digest('base64');
+                headers['gameon-date'] = timestamp;
+                headers['gameon-signature'] = hash;
+            }
+            options = {
+                'extraHeaders' : headers
+            };
+            return options;
+        },
+        getConnectionLocation : function() {
+            return this.params.connectionLocation;
+        },
+        checkText : function(routingInformation, object) {
+            return routingInformation && object && routingInformation[0] === 'ack' && object.version;
+        }
+    }
 }
 
 // global.main = function(params) {

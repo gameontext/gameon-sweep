@@ -249,3 +249,48 @@ describe('CommandHasRunChecker', function() {
         }, 1500)
     });
 });
+describe.only('connectCommand', function() {
+    it('describes itself', function() {
+        assert(createConnectCommand().description);
+    });
+    it('Has a hard to test execute function that creates a web socket', function() {
+        assert(createConnectCommand().execute);
+    });
+    describe('#checkText', function() {
+        it('Is true for a valid ack message', function() {
+            var testObject = createConnectCommand();
+            assert(testObject.checkText(['ack'], {version: '1.0'}));
+        });
+        it('Is false for an invalid ack message', function() {
+            var testObject = createConnectCommand();
+            assert(!testObject.checkText(['ack'], {}));
+        });
+        it('Is false for a message with no routing information', function() {
+            var testObject = createConnectCommand();
+            assert(!testObject.checkText(undefined, {version: '1.0'}));
+        });
+    });
+    
+    describe('#getWsConnectionOptions', function() {
+        it('should add the protocol header', function() {
+            var testObject = createConnectCommand();
+            assert.equal(testObject.getWsConnectionOptions().extraHeaders['gameon-protocol'], 'mediator,1.1');
+        });
+        it('should have signature headers in the options when there is a secret in the params', function() {
+            var testObject = createConnectCommand({'connectionSecret':'a secret'});
+            var headers = testObject.getWsConnectionOptions().extraHeaders;
+            assert(headers);
+            assert(headers['gameon-signature']);
+            assert(headers['gameon-date']);
+            Date.parse(headers['gameon-date']);
+        });
+    });
+    describe('#getConnectionLocation', function() {
+        it('should get the location out of the params', function() {
+            const location = 'ws://wibble';
+            var testObject = createConnectCommand({'connectionLocation': location});
+            var calculatedLocation = testObject.getConnectionLocation();
+            assert.equal(calculatedLocation, location);
+        });
+    });
+});
