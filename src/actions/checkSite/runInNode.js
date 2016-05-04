@@ -17,8 +17,8 @@ whisk = {
 	'async' : function() {
 		console.log("Called async");
 	},
-	'done' : function() {
-		console.log("Called done");
+	'done' : function(output) {
+		console.log("Called done " + JSON.stringify(output));
 	}
 }
 

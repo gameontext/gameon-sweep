@@ -88,6 +88,12 @@ global.main = function(params) {
 
     wsLocation = getConnectionLocation(params);
     connectionOptions = getWsConnectionOptions(params);
+    
+    connection = ws.connect(wsLocation, connectionOptions);
+    connection.on("text", function(text) {
+        console.log("Got back text " + text);
+    });
+    connection.on("connect", createOnConnectHandler(connection));
 
     if (commandIterator.hasNextCommand()) {
         runCommand(commandIterator.nextCommand());

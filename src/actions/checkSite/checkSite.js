@@ -37,7 +37,7 @@ function createCommandRunner(commands) {
             },
             runCurrentCommand: function() {
                 var commandToRun = this.commands[this.lastRunCommand];
-                console.log("Running command " + commandToRun.description);
+                console.log("Running command to " + commandToRun.description);
                 commandToRun.execute(this.connection, this.connectionCallback);
                 this.waitForChecks(commandToRun);
             },
@@ -57,27 +57,31 @@ function createCommandRunner(commands) {
             },
             connectionCallback: function(connection) {
                 commandRunner.connection = connection;
-                commandRunner.commandRunChecker = createCommandHasRunChecker(connection);
+                commandRunner.commandRunChecker = createCommandHasRunChecker(connection, commandRunner.allChecksDoneCallback);
             },
             messageReceivedCallback: function(time) {
                 var timePenalty = Math.round(time/1000);
-                commandRunner.score += (100 - timePenalty);
-                commandRunner.runNextCommandOrFinish();
+                var scoreToAdd = 100 - timePenalty;
+                commandRunner.score += scoreToAdd;
+                console.log('Received message back and scoring ' + scoreToAdd);
             },
             timeoutCallback:  function(time) {
+                console.log('Check timed out so scoring -30');
                 commandRunner.score -= 30;
                 if (commandRunner.lastRunCommand === 0) {
-                    commandRunner.reportDone();
-                } else {
-                    commandRunner.runNextCommandOrFinish();
+                    commandRunner.lastRunCommand = commandRunner.commands.length;
                 }
+            },
+            allChecksDoneCallback : function() {
+                commandRunner.runNextCommandOrFinish();
             }
         }
     return commandRunner; 
 }
-function createCommandHasRunChecker(connection) {
+function createCommandHasRunChecker(connection, checksCompleteCallback) {
     var commandHasRunChecker = {
         connection : connection,
+        allChecksCompleteCallback : checksCompleteCallback,
         checks: [],
         timeout : DEFAULT_TIMEOUT,
         waitForTextMessageFromConnection : function(isThisTheRightMessage, messageFoundCallback, timeoutCallback) {
@@ -93,12 +97,14 @@ function createCommandHasRunChecker(connection) {
                      }
                  },
             }
+            this.checks.push(newCheck);
             newCheck.timeoutObj = setTimeout(function() {
                 newCheck.callbackAfterCompletion(timeoutCallback);
+                commandHasRunChecker.checkComplete(newCheck);
             }, this.timeout);
-            this.checks.push(newCheck);
         },
         messageReceived : function (text) {
+            console.log('Message received: ' + text);
             var parsedText = this.parseText(text);
             if (this.checks) {
                 var checkFound = undefined;
@@ -113,10 +119,24 @@ function createCommandHasRunChecker(connection) {
                     }
                 }
                 if (checkFound) {
-                    this.checks.splice(checkFound.position, 1);
                     clearTimeout(check.timeoutObj);
                     check.callbackAfterCompletion(check.messageFoundCallback, new Date() - check.startTime);
+                    this.checkComplete(checkFound.check);
                 }
+            }
+        },
+        checkComplete : function(checkThatIsComplete) {
+            var checkPosition = -1;
+            for(var i = 0 ; i < this.checks.length ; i++) {
+                var check = this.checks[i];
+                if (checkThatIsComplete === check) {
+                    checkPosition = i;
+                    break;
+                }
+            }
+            this.checks.splice(checkPosition, 1);
+            if (this.checks.length === 0) {
+                this.allChecksCompleteCallback();
             }
         },
         parseText : function(text) {
@@ -143,10 +163,11 @@ function createCommandHasRunChecker(connection) {
 
 function createConnectCommand(params) {
     return {
+        description : 'connect to web socket and waiting for ack message',
         params : params,
-        description : 'Connecting to web socket and waiting for ack message',
         execute : function(nullConnection, connectionCreatedCallback) {
-            connection = ws.connect(wsLocation, getWsConnectionOptions());
+            connection = ws.connect(this.getConnectionLocation(), this.getWsConnectionOptions());
+            connectionCreatedCallback(connection);
         },
         getWsConnectionOptions : function() {
             headers = {
@@ -178,8 +199,23 @@ function createConnectCommand(params) {
     }
 }
 
-// global.main = function(params) {
-// createCommandRunner([connect, sayHello, chat, sayGoodbye]);
-// createCommmandRunner.start();
-// whisk.async();
-// }
+function createRoomHelloCommand(params) {
+    return {
+        description : 'enter a room and checking for two message: ',
+        params : params,
+        execute : function(connection) {
+            connection.send('roomHello,'
+                    + this.params.id
+                    + ',{"username": "Sweep","userId": "Sweep"}')
+        },
+        checkText : function() {
+            return false;
+        }
+    }
+}
+
+global.main = function(params) {
+    var commandRunner = createCommandRunner([createConnectCommand(params), createRoomHelloCommand(params)]);
+    commandRunner.start();
+    whisk.async();
+}

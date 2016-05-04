@@ -146,6 +146,7 @@ describe('CommandRunner', function() {
     describe('A command with two expected messages', function() {
         var hasRunSecondCommand = false;
         beforeEach(function() {
+            doneCalled = false;
             hasRunSecondCommand = false;
             var fakeCommandThatHasTwoExpectedTextMessages = {
                     execute: function() {
@@ -180,12 +181,36 @@ describe('CommandRunner', function() {
                 done();
             }, 1500);
         });
+        it('Only calls done when both checks are complete', function() {
+            testObject.start();
+            fakeConnection.callback();
+            fakeConnection.callback('{"value": "wibble"}');
+            assert(!doneCalled);
+            fakeConnection.callback('{"value": "fish"}');
+            assert(doneCalled);
+        });
+        it('Calls done if one check completes and the other times out', function(done) {
+            testObject.start();
+            fakeConnection.callback();
+            fakeConnection.callback('{"value": "wibble"}');
+            assert(!doneCalled);
+            fakeConnection.callback('{"value": "wibble"}');
+            assert(!doneCalled);
+            setTimeout(function() {
+                assert(doneCalled);
+                done();
+            }, 1500);
+        });
     });
 });
 
 describe('CommandHasRunChecker', function() {
+    var testObject = undefined;
+    beforeEach(function() {
+        DEFAULT_TIMEOUT = 1000;
+        testObject = createCommandHasRunChecker(fakeConnection, function() {});
+    });
     it('waits until function is called', function() {
-        var testObject = createCommandHasRunChecker(fakeConnection);
         var hasReportedMessageReceived = false;
         testObject.waitForTextMessageFromConnection(function() {
             return true;
@@ -196,7 +221,6 @@ describe('CommandHasRunChecker', function() {
         assert(hasReportedMessageReceived);
     });
     it('Gives a parsed message when testing the message is correct', function() {
-        var testObject = createCommandHasRunChecker(fakeConnection);
         var hasReportedMessageReceived = false;
         testObject.waitForTextMessageFromConnection(function(routingInformation, object) {
                 assert.deepEqual(routingInformation, ['a', 'b']);
@@ -209,13 +233,9 @@ describe('CommandHasRunChecker', function() {
         assert(hasReportedMessageReceived);
     });
     it('Times out if no text message is received', function(done) {
-        DEFAULT_TIMEOUT = 1000;
-        var testObject = createCommandHasRunChecker(fakeConnection);
         testObject.waitForTextMessageFromConnection(null, null, done);
     });
     it('Does not call timeout if message is received', function(done) {
-        DEFAULT_TIMEOUT = 500;
-        var testObject = createCommandHasRunChecker(fakeConnection);
         setTimeout(done, 1500);
         testObject.waitForTextMessageFromConnection(function() {
                 return true;
@@ -225,7 +245,6 @@ describe('CommandHasRunChecker', function() {
         fakeConnection.callback();
     });
     it('Tells the message received callback how long it took in ms', function() {
-        var testObject = createCommandHasRunChecker(fakeConnection);
         var hasReportedMessageReceived = false;
         testObject.waitForTextMessageFromConnection(function() {
             return true;
@@ -239,8 +258,6 @@ describe('CommandHasRunChecker', function() {
         assert(hasReportedMessageReceived);
     });
     it('Does not callback if the wrong message is received', function(done) {
-        DEFAULT_TIMEOUT = 1000;
-        var testObject = createCommandHasRunChecker(fakeConnection);
         var timeoutCalled = false;
         testObject.waitForTextMessageFromConnection(function() {
             return false;
