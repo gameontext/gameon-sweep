@@ -282,11 +282,17 @@ describe('connectCommand', function() {
         });
         it('should have signature headers in the options when there is a secret in the params', function() {
             var testObject = createConnectCommand({'connectionSecret':'a secret'});
+            var mockDate = new Date(1);
+            testObject.getCurrentDate = function() {
+                return new Date(mockDate);
+            }
             var headers = testObject.getWsConnectionOptions().extraHeaders;
             assert(headers);
-            assert(headers['gameon-signature']);
             assert(headers['gameon-date']);
             Date.parse(headers['gameon-date']);
+            assert.equal(mockDate.toISOString(), headers['gameon-date']);
+            assert(headers['gameon-signature']);
+            assert.equal('rrxsatJJnQKTVuK9/PFnMvvfb0P677jAtMml7IbpgUg=', headers['gameon-signature']);
         });
     });
     describe('#getConnectionLocation', function() {

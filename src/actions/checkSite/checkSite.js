@@ -153,7 +153,7 @@ function createConnectCommand(params) {
                 'gameon-protocol' : PROTOCOL
             };
             if (this.params && this.params.connectionSecret) {
-                var now = new Date();
+                var now = this.getCurrentDate();
                 var timestamp = now.toISOString();
 
                 var hash = crypto.createHmac('sha256', this.params.connectionSecret).update(
@@ -171,6 +171,9 @@ function createConnectCommand(params) {
         },
         checkText : function(routingInformation, object) {
             return routingInformation && object && routingInformation[0] === 'ack' && object.version;
+        },
+        getCurrentDate : function() {
+            return new Date();
         }
     }
 }
