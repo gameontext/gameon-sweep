@@ -17,6 +17,15 @@ var ws = require("nodejs-websocket");
 var crypto = require("crypto");
 var DEFAULT_TIMEOUT = 20000;
 const PROTOCOL = 'mediator,1.1';
+
+global.main = function(params) {
+    var commandRunner = createCommandRunner([createConnectCommand(params), 
+                                             createRoomHelloCommand(params),
+                                             createChatCommand(params)]);
+    commandRunner.start();
+    whisk.async();
+}
+
 function createCommandRunner(commands) {
     var commandRunner = {
             commands : commands,
@@ -201,21 +210,54 @@ function createConnectCommand(params) {
 
 function createRoomHelloCommand(params) {
     return {
-        description : 'enter a room and checking for two message: ',
+        description : 'enter a room and checking for two message: a "location" message and an "event" message',
         params : params,
         execute : function(connection) {
-            connection.send('roomHello,'
-                    + this.params.id
-                    + ',{"username": "Sweep","userId": "Sweep"}')
+            sendMessage(connection, 'roomHello', this.params);
         },
-        checkText : function() {
-            return false;
-        }
+        checkText : [function(routingInformation, object) {
+            if (isPlayerMessageOfType(routingInformation, object, 'Sweep', 'location') ) {
+                return true;
+            } else {
+                return false;
+            }
+        }, function(routingInformation, object) {
+            if (isPlayerMessageOfType(routingInformation, object, '*', 'event') && 'Sweep enters the room' === object.content) {
+                return true;
+            } else {
+                return false;
+            }
+        }]
     }
 }
 
-global.main = function(params) {
-    var commandRunner = createCommandRunner([createConnectCommand(params), createRoomHelloCommand(params)]);
-    commandRunner.start();
-    whisk.async();
+var isPlayerMessage = function(routingInformation, recipient) {
+    return routingInformation.length === 2 && 'player' === routingInformation[0] && recipient === routingInformation[1];
+}
+var isPlayerMessageOfType = function(routingInformation, object, recipient, expectedType) {
+    return isPlayerMessage(routingInformation, recipient) && object && expectedType === object.type;
+}
+
+function sendMessage(connection, messageType, params, object) {
+    if (!object) {
+        object = {};
+    }
+    object.username = "Sweep";
+    object.userId = "Sweep";
+    connection.send(messageType + ','
+            + params.id
+            + ',' + JSON.stringify(object));
+}
+
+function createChatCommand(params) {
+    return {
+        params : params,
+        description : 'chat to the room saying hello',
+        execute : function(connection) {
+            sendMessage(connection, 'room', this.params, {content: 'Hello, Sweep here.  Just checking for cobwebs...'})
+        },
+        checkText : function(routingInformation, object) {
+            return isPlayerMessageOfType(routingInformation, object, '*', 'chat') && 'Hello, Sweep here.  Just checking for cobwebs...' === object.content;
+        }
+    }
 }

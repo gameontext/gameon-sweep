@@ -19,7 +19,7 @@ const
 PROTOCOL = 'mediator,1.1';
 var score = 0;
 var connection;
-var timeoutObj = setTimeout(timeoutFunction, 20000);
+//var timeoutObj = setTimeout(timeoutFunction, 20000);
 var connectionOptions;
 var wsLocation;
 var startTime = 0;
@@ -94,10 +94,25 @@ global.main = function(params) {
         console.log("Got back text " + text);
     });
     connection.on("connect", createOnConnectHandler(connection));
-
-    if (commandIterator.hasNextCommand()) {
-        runCommand(commandIterator.nextCommand());
-    }
+    connection.on('error', function(err) {
+        console.log("Have error " + err);
+    });
+    connection.on('close', function(code, reason) {
+        console.log("Closed " + code + " " + reason);
+    });
+    
+    
+    setTimeout(function() {
+        console.log("closing");
+        connection.close(0, 'all done');
+        setTimeout(function() {
+            console.log("Finished timeout");
+        }, 5000);
+    }, 5000);
+    
+//    if (commandIterator.hasNextCommand()) {
+//        runCommand(commandIterator.nextCommand());
+//    }
 
     return whisk.async();
 };

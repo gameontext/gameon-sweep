@@ -19,13 +19,16 @@ var fs = require("fs");
 eval(fs.readFileSync(__dirname + '/checkSite.js')+'');
 eval(fs.readFileSync(__dirname + '/../../common/fakeWhisk.js')+'');
 
-var fakeConnection;
-fakeConnection = {
+var fakeConnection = {
+    sentMessage : null,
     callback: null,
     on(eventType, callback) {
         if (eventType === "text") {
             this.callback = callback;
         }
+    },
+    send : function(message) {
+        this.sentMessage = message;
     }
 }
 describe('CommandRunner', function() {
@@ -49,7 +52,7 @@ describe('CommandRunner', function() {
     var checkScore = function(expectedScore) {
         assert(doneParams);
         assert(doneParams.score);
-        assert.equal(doneParams.score, expectedScore);
+assert.equal(doneParams.score, expectedScore);
     }
     describe('Single command running', function() {
         beforeEach(function() {
@@ -319,5 +322,60 @@ describe('connectCommand', function() {
             var calculatedLocation = testObject.getConnectionLocation();
             assert.equal(calculatedLocation, location);
         });
+    });
+});
+describe('RoomHello command', function() {
+    var testObject = undefined;
+    var fakeRoomId = 'RoomIdForTest';
+    beforeEach(function() {
+        testObject = createRoomHelloCommand({id: fakeRoomId});
+    });
+    var checkMessageIsExpected = function(messageRoutingInformation, messageObject, messageShouldBeExpected) {
+        var foundCheckThatMatchesMessage = false;
+        for (var i = 0; i < testObject.checkText.length; i++) {
+            if (testObject.checkText[i](messageRoutingInformation, messageObject)) {
+                foundCheckThatMatchesMessage = true;
+                break;
+            }
+        }
+        assert.equal(foundCheckThatMatchesMessage, messageShouldBeExpected);
+    }
+    it('sends a roomHello to the room', function() {
+        testObject.execute(fakeConnection);
+        var expected = 'roomHello,' + fakeRoomId + ',{"username":"Sweep","userId":"Sweep"}';
+        assert.deepEqual(fakeConnection.sentMessage, expected);
+    });
+    it('does not respond to the wrong message', function() {
+        checkMessageIsExpected(['player', '*'], {'type' : 'chat'}, false);
+    });
+    it('expects a location message', function() {
+        checkMessageIsExpected(['player', 'Sweep'], {'type' : 'location'}, true);
+    });
+    it('expects an event message saying the Sweep has entered the room', function() {
+        checkMessageIsExpected(['player', '*'], {'type' : 'event', 'content' : 'Sweep enters the room'}, true);
+    });
+});
+var parseMessageObject = function(text) {
+    return JSON.parse(text.substring(text.indexOf('{')));
+}
+describe('Chat command', function() {
+    var testObject = undefined;
+    var fakeRoomId = 'RoomIdForChatTest';
+    beforeEach(function() {
+        testObject = createChatCommand({id: fakeRoomId});
+    });
+    it('sends a chat message to the room', function() {
+        testObject.execute(fakeConnection);
+        assert(fakeConnection.sentMessage.startsWith('room,' + fakeRoomId + ','));
+        var outputObject = parseMessageObject(fakeConnection.sentMessage);
+        assert.equal(outputObject.username, 'Sweep');
+        assert.equal(outputObject.userId, 'Sweep');
+        assert.equal(outputObject.content, 'Hello, Sweep here.  Just checking for cobwebs...');
+    });
+    it('does not respond to the wrong message', function() {
+        assert(!testObject.checkText(['player', 'Sweep'], {'type' : 'location'}));
+    });
+    it('responds to chat messages', function() {
+        assert(testObject.checkText(['player', '*'], {type : 'chat', content : 'Hello, Sweep here.  Just checking for cobwebs...'}));
     });
 });
