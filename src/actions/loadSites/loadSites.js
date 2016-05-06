@@ -28,6 +28,9 @@ function allSitesResponseHandler(error, response, body) {
     var sites = JSON.parse(body);
     var output = 'Have loaded ' + sites.length + ' sites.';
 
+    // Randomize the order so that we get different pairs to compare
+    shuffleArray(sites);
+
     // Record what we get back from our call to the other action and
     // call done when they have all returned
     var expectedResponses = sites.length;
@@ -42,7 +45,7 @@ function allSitesResponseHandler(error, response, body) {
                 };
             } else {
                 console.log("It worked!: " + activation);
-                responses[i] = activation.result;
+                responses[i] = (activation) ? activation.result : undefined;
             }
             expectedResponses -= 1;
             if (expectedResponses === 0) {
@@ -56,26 +59,25 @@ function allSitesResponseHandler(error, response, body) {
         }
     }
 
-    sites
-            .forEach(function(site, index) {
-                var siteInformation = {
-                    id : site._id
-                }
-                if (site.info != null) {
-                    siteInformation.name = site.info.name;
-                    if (site.info.connectionDetails != null) {
-                        siteInformation.connectionLocation = site.info.connectionDetails.target;
-                        siteInformation.connectionType = site.info.connectionDetails.type;
-                        siteInformation.connectionSecret = site.info.connectionDetails.token;
-                    }
-                }
-                whisk.invoke({
-                    name : 'checkSite',
-                    parameters : siteInformation,
-                    blocking : true,
-                    next : onResponse(index)
-                });
+    sites.forEach(function(site, index) {
+        if (site.info && site.info.connectionDetails) {
+            var siteInformation = {
+                id : site._id,
+                name : site.info.name,
+                connectionLocation : site.info.connectionDetails.target,
+                connectionType : site.info.connectionDetails.type,
+                connectionSecret : site.info.connectionDetails.token
+            }
+            whisk.invoke({
+                name : 'checkSite',
+                parameters : siteInformation,
+                blocking : true,
+                next : onResponse(index)
             });
+        } else {
+            onResponse(index)();
+        }
+    });
 }
 
 function buildGetSitesOptions(params) {
@@ -112,5 +114,15 @@ function addSecurityHeaders(options, params) {
         'gameon-id' : sweepId,
         'gameon-date' : timestamp,
         'gameon-signature' : hash
+    }
+}
+
+function shuffleArray(array) {
+    for (var i = 0; i < array.length - 1; i++) {
+        var j = i + Math.floor(Math.random() * (array.length - i));
+
+        var temp = array[j];
+        array[j] = array[i];
+        array[i] = temp;
     }
 }

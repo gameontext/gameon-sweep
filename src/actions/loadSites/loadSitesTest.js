@@ -28,9 +28,15 @@ describe('Load sites', function() {
         });
         it('should invoke whisk.invoke for each site', function() {
             allSitesResponseHandler(null, null, JSON.stringify([ {
-                '_id' : 'first'
+                '_id' : 'first',
+                'info' : {
+                    'connectionDetails' : {}
+                }
             }, {
-                '_id' : 'second'
+                '_id' : 'second',
+                'info' : {
+                    'connectionDetails' : {}
+                }
             } ]));
             assert.equal(invokedParams.length, 2);
         });
@@ -65,10 +71,41 @@ describe('Load sites', function() {
         });
         it('should call whisk done when complete', function() {
             allSitesResponseHandler(null, null, JSON.stringify([ {
-                '_id' : 'first'
+                '_id' : 'first',
+                'info' : {
+                    'connectionDetails' : {}
+                }
+            }, {
+                '_id' : 'second',
+                'info' : {
+                    'connectionDetails' : {}
+                }
+            } ]));
+            assert(doneCalled);
+        });
+        it('should not invoke if there are no connection details', function() {
+            allSitesResponseHandler(null, null, JSON.stringify([ {
+                '_id' : 'first',
+                'info' : {
+                    'connectionDetails' : {}
+                }
+            }, {
+                '_id' : 'second',
+                'info' : { }
+            } ]));
+            assert.equal(invokedParams.length, 1);
+            assert(doneCalled);
+        });
+        it('should not invoke if there is no info', function() {
+            allSitesResponseHandler(null, null, JSON.stringify([ {
+                '_id' : 'first',
+                'info' : {
+                    'connectionDetails' : {}
+                }
             }, {
                 '_id' : 'second'
             } ]));
+            assert.equal(invokedParams.length, 1);
             assert(doneCalled);
         });
     });
@@ -110,3 +147,19 @@ describe('Load sites', function() {
                 });
     });
 });
+describe('shuffle array', function() {
+    it ('should produce an array in a different order of the input', function() {
+        var input = ["a", "b", "c", "d", "e", "f", "g", "h", "j", "k"];
+        var output = ["a", "b", "c", "d", "e", "f", "g", "h", "j", "k"];
+        shuffleArray(output)
+        try {
+            assert.deepEqual(output, input);
+            fail("Arrays were equal after the shuffle. Maybe try again, this will happen once in every 3.6 million attempts");
+        } catch(err) {
+            // pass
+        }
+        input.forEach(function(item) {
+            assert(output.indexOf(item) != -1);
+        });
+    });
+})
