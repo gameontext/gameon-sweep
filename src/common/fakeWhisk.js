@@ -18,6 +18,7 @@ var asyncCalled =  false;
 var doneCalled = false;
 var doneParams = {};
 whisk = {
+    'invokeReturnData' : {},
 	'async' : function() {
 		console.log("Called async");
 		asyncCalled = true;

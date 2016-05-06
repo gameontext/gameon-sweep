@@ -108,6 +108,9 @@ describe('Load sites', function() {
             assert.equal(invokedParams.length, 1);
             assert(doneCalled);
         });
+        it('should swap a low scoring room that is close to the centre for a high scoring one far from the centre', function() {
+            fail('TODO: implement this');
+        })'
     });
 
     describe('#buildGetSitesOptions', function() {

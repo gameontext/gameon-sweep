@@ -35,6 +35,7 @@ function allSitesResponseHandler(error, response, body) {
     // call done when they have all returned
     var expectedResponses = sites.length;
     var responses = new Array(sites.length);
+    var lastResponse = undefined;
     var onResponse = function(i) {
         return function(error, activation) {
             console.log("Have returned from " + i);
