@@ -21,7 +21,8 @@ const PROTOCOL = 'mediator,1.1';
 global.main = function(params) {
     var commandRunner = createCommandRunner([createConnectCommand(params), 
                                              createRoomHelloCommand(params),
-                                             createChatCommand(params)]);
+                                             createChatCommand(params),
+                                             createRoomGoodbyeCommand(params)]);
     commandRunner.start();
     whisk.async();
 }
@@ -213,7 +214,7 @@ function createRoomHelloCommand(params) {
         description : 'enter a room and checking for two message: a "location" message and an "event" message',
         params : params,
         execute : function(connection) {
-            sendMessage(connection, 'roomHello', this.params);
+            sendMessage(connection, 'roomHello', this.params, { version: 1});
         },
         checkText : [function(routingInformation, object) {
             if (isPlayerMessageOfType(routingInformation, object, 'Sweep', 'location') ) {
@@ -222,7 +223,7 @@ function createRoomHelloCommand(params) {
                 return false;
             }
         }, function(routingInformation, object) {
-            if (isPlayerMessageOfType(routingInformation, object, '*', 'event') && 'Sweep enters the room' === object.content) {
+            if (isPlayerMessageOfType(routingInformation, object, '*', 'event') && object.content && 'Sweep enters the room' === object.content['*'] ) {
                 return true;
             } else {
                 return false;
@@ -244,6 +245,7 @@ function sendMessage(connection, messageType, params, object) {
     }
     object.username = "Sweep";
     object.userId = "Sweep";
+    console.log("Sending " + JSON.stringify(object));
     connection.send(messageType + ','
             + params.id
             + ',' + JSON.stringify(object));
@@ -258,6 +260,23 @@ function createChatCommand(params) {
         },
         checkText : function(routingInformation, object) {
             return isPlayerMessageOfType(routingInformation, object, '*', 'chat') && 'Hello, Sweep here.  Just checking for cobwebs...' === object.content;
+        }
+    }
+}
+
+function createRoomGoodbyeCommand(params) {
+    return {
+        description : 'send roomGoodbye message and expect an "event" message',
+        params : params,
+        execute : function(connection) {
+            sendMessage(connection, 'roomGoodbye', this.params);
+        },
+        checkText : function(routingInformation, object) {
+            if (isPlayerMessageOfType(routingInformation, object, '*', 'event') && object.content && 'Sweep leaves the room' === object.content['*'] ) {
+                return true;
+            } else {
+                return false;
+            }
         }
     }
 }

@@ -342,8 +342,11 @@ describe('RoomHello command', function() {
     }
     it('sends a roomHello to the room', function() {
         testObject.execute(fakeConnection);
-        var expected = 'roomHello,' + fakeRoomId + ',{"username":"Sweep","userId":"Sweep"}';
-        assert.deepEqual(fakeConnection.sentMessage, expected);
+        assert(fakeConnection.sentMessage.startsWith('roomHello,' + fakeRoomId + ','));
+        var outputObject = parseMessageObject(fakeConnection.sentMessage);
+        assert.equal(outputObject.username, 'Sweep');
+        assert.equal(outputObject.userId, 'Sweep');
+        assert.equal(outputObject.version, 1);
     });
     it('does not respond to the wrong message', function() {
         checkMessageIsExpected(['player', '*'], {'type' : 'chat'}, false);
@@ -352,7 +355,7 @@ describe('RoomHello command', function() {
         checkMessageIsExpected(['player', 'Sweep'], {'type' : 'location'}, true);
     });
     it('expects an event message saying the Sweep has entered the room', function() {
-        checkMessageIsExpected(['player', '*'], {'type' : 'event', 'content' : 'Sweep enters the room'}, true);
+        checkMessageIsExpected(['player', '*'], {'type' : 'event', 'content' : { '*' : 'Sweep enters the room'}}, true);
     });
 });
 var parseMessageObject = function(text) {
@@ -377,5 +380,23 @@ describe('Chat command', function() {
     });
     it('responds to chat messages', function() {
         assert(testObject.checkText(['player', '*'], {type : 'chat', content : 'Hello, Sweep here.  Just checking for cobwebs...'}));
+    });
+});
+describe('Room Goodbye command', function() {
+    var testObject = undefined;
+    var fakeRoomId = 'RoomIdForGoodbyeTest';
+    beforeEach(function() {
+        testObject = createRoomGoodbyeCommand({id: fakeRoomId});
+    });
+    it('sends a roomGoodbye message to the room', function() {
+        testObject.execute(fakeConnection);
+        var expected = 'roomGoodbye,' + fakeRoomId + ',{"username":"Sweep","userId":"Sweep"}';
+        assert.equal(fakeConnection.sentMessage, expected);
+    });
+    it('does not respond to the wrong message', function() {
+        assert(!testObject.checkText(['player', 'Sweep'], {'type' : 'location'}));
+    });
+    it('responds to chat messages', function() {
+        assert(testObject.checkText(['player', '*'], {type : 'event', content : { '*' : 'Sweep leaves the room'}}));
     });
 });
