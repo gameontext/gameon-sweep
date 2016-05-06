@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
+var doneCalled = false;
 whisk = {
 	'async' : function() {
 		console.log("Called async");
 	},
 	'done' : function(output) {
 		console.log("Called done " + JSON.stringify(output));
+		doneCalled = true;
 	}
 }
 
@@ -44,9 +46,22 @@ var mugRoom = {
 	"connectionLocation" : "ws://127.0.0.1:9080/rooms/ws/MugRoom",
 	"connectionType" : "websocket"
 };
-//console.log('Calling main for basement');
-//main(basement);
-console.log('Calling main for rec room');
-main(recRoom);
-//console.log('Calling main for mug room');
-//main(recRoom);
+var createTimerFunctionToWaitBeforeCheckingRoom = function(rooms) {
+    setTimeout(function() {
+        if (doneCalled) {
+            if (rooms.length > 0) {
+                var room = rooms.pop();
+                console.log('Calling main for room ' + room.name);
+                doneCalled = false;
+                main(room);
+                createTimerFunctionToWaitBeforeCheckingRoom(rooms);
+            }
+        } else {
+            createTimerFunctionToWaitBeforeCheckingRoom(rooms);
+        }
+    }, 1000);
+}
+
+main(basement);
+createTimerFunctionToWaitBeforeCheckingRoom([recRoom, mugRoom]);
+
