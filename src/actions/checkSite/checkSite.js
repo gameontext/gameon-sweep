@@ -70,6 +70,10 @@ function createCommandRunner(commands) {
             },
             connectionCallback: function(connection) {
                 commandRunner.connection = connection;
+                connection.on('error', function(err) {
+                    console.log("Have error " + err + " giving 10 point penalty");
+                    commandRunner.score -= 10;
+                });
                 commandRunner.commandRunChecker = createCommandHasRunChecker(connection, commandRunner.allChecksDoneCallback);
             },
             messageReceivedCallback: function(time) {
@@ -226,7 +230,7 @@ function createRoomHelloCommand(params) {
                 return false;
             }
         }, function(routingInformation, object) {
-            if (isPlayerMessageOfType(routingInformation, object, '*', 'event') && object.content && 'Sweep enters the room' === object.content['*'] ) {
+            if (isPlayerMessageOfType(routingInformation, object, '*', 'event') && doesContentMessageContainStrings(object, ['Sweep', 'enters'])) {
                 return true;
             } else {
                 return false;
@@ -240,6 +244,21 @@ var isPlayerMessage = function(routingInformation, recipient) {
 }
 var isPlayerMessageOfType = function(routingInformation, object, recipient, expectedType) {
     return isPlayerMessage(routingInformation, recipient) && object && expectedType === object.type;
+}
+
+var doesContentMessageContainStrings = function(object, stringsToLookFor) {
+    if (object.content && object.content['*']) {
+        var contentMessage = object.content['*'];
+        for (var i = 0; i < stringsToLookFor.length; i++) {
+            var stringToLookFor = stringsToLookFor[i];
+            if (contentMessage.indexOf(stringToLookFor) === -1) {
+                return false;
+            }
+        }
+    } else {
+        return false;
+    }
+    return true;
 }
 
 function sendMessage(connection, messageType, params, object) {
@@ -274,7 +293,7 @@ function createRoomGoodbyeCommand(params) {
             sendMessage(connection, 'roomGoodbye', this.params);
         },
         checkText : function(routingInformation, object) {
-            if (isPlayerMessageOfType(routingInformation, object, '*', 'event') && object.content && 'Sweep leaves the room' === object.content['*'] ) {
+            if (isPlayerMessageOfType(routingInformation, object, '*', 'event') && doesContentMessageContainStrings(object, ['Sweep', 'leaves'])) {
                 return true;
             } else {
                 return false;

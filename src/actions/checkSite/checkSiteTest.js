@@ -23,9 +23,12 @@ var connectionClosedCalled = false;
 var fakeConnection = {
     sentMessage : null,
     callback: null,
+    errorCallback : null,
     on(eventType, callback) {
         if (eventType === "text") {
             this.callback = callback;
+        } else if (eventType === "error") {
+            this.errorCallback = callback;
         }
     },
     send : function(message) {
@@ -100,6 +103,14 @@ describe('CommandRunner', function() {
             testObject.start();
             setTimeout(function() {
                 checkScore(-30);
+                done();
+            }, 1500);
+        });
+        it('Gives an extra penalty for a command that returns an error', function(done) {
+            testObject.start();
+            fakeConnection.errorCallback();
+            setTimeout(function() {
+                checkScore(-40);
                 done();
             }, 1500);
         });
@@ -421,7 +432,7 @@ describe('Room Goodbye command', function() {
         assert(!testObject.checkText(['player', 'Sweep'], {'type' : 'location'}));
     });
     it('responds to chat messages', function() {
-        assert(testObject.checkText(['player', '*'], {type : 'event', content : { '*' : 'Sweep leaves the room'}}));
+        assert(testObject.checkText(['player', '*'], {type : 'event', content : { '*' : 'Sweep leaves the room.'}}));
     });
 });
 
