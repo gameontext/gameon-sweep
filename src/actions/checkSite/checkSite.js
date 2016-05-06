@@ -22,7 +22,8 @@ global.main = function(params) {
     var commandRunner = createCommandRunner([createConnectCommand(params), 
                                              createRoomHelloCommand(params),
                                              createChatCommand(params),
-                                             createRoomGoodbyeCommand(params)]);
+                                             createRoomGoodbyeCommand(params),
+                                             createCloseConnectionCommand(params)]);
     commandRunner.start();
     whisk.async();
 }
@@ -53,7 +54,9 @@ function createCommandRunner(commands) {
             },
             waitForChecks: function(commandToRun) {
                 var checks = commandToRun.checkText;
-                if (checks instanceof Function) {
+                if (!checks) {
+                    this.runNextCommandOrFinish();
+                } else if (checks instanceof Function) {
                     this.commandRunChecker.waitForTextMessageFromConnection(checks, this.messageReceivedCallback, this.timeoutCallback);
                 } else {
                     for (i = 0; i < checks.length; i++) {
@@ -245,10 +248,9 @@ function sendMessage(connection, messageType, params, object) {
     }
     object.username = "Sweep";
     object.userId = "Sweep";
-    console.log("Sending " + JSON.stringify(object));
-    connection.send(messageType + ','
-            + params.id
-            + ',' + JSON.stringify(object));
+    var message = messageType + ',' + params.id + ',' + JSON.stringify(object);
+    console.log("Sending message to room " + message);
+    connection.send(message);
 }
 
 function createChatCommand(params) {
@@ -277,6 +279,15 @@ function createRoomGoodbyeCommand(params) {
             } else {
                 return false;
             }
+        }
+    }
+}
+
+function createCloseConnectionCommand(params) {
+    return {
+        description : 'close the connection',
+        execute : function(connection) {
+            connection.close(0, 'Sweep has finished checks so leaving room');
         }
     }
 }

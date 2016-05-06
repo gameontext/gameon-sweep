@@ -19,6 +19,7 @@ var fs = require("fs");
 eval(fs.readFileSync(__dirname + '/checkSite.js')+'');
 eval(fs.readFileSync(__dirname + '/../../common/fakeWhisk.js')+'');
 
+var connectionClosedCalled = false;
 var fakeConnection = {
     sentMessage : null,
     callback: null,
@@ -29,6 +30,9 @@ var fakeConnection = {
     },
     send : function(message) {
         this.sentMessage = message;
+    },
+    close : function() {
+        connectionClosedCalled = true;
     }
 }
 describe('CommandRunner', function() {
@@ -52,7 +56,7 @@ describe('CommandRunner', function() {
     var checkScore = function(expectedScore) {
         assert(doneParams);
         assert(doneParams.score);
-assert.equal(doneParams.score, expectedScore);
+        assert.equal(doneParams.score, expectedScore);
     }
     describe('Single command running', function() {
         beforeEach(function() {
@@ -205,6 +209,26 @@ assert.equal(doneParams.score, expectedScore);
             }, 1500);
         });
     });
+    describe('A command that does not do any checks', function() {
+        var hasRunSecondCommand = false;
+        beforeEach(function() {
+            doneCalled = false;
+            hasRunSecondCommand = false;
+            var fakeCommandThatHasTwoExpectedTextMessages = {
+                    execute: function() {
+                        hasRunSecondCommand = true;
+                    }
+            }
+            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatHasTwoExpectedTextMessages]);
+        });
+        it('completes after running the command without assigning it a score or waiting', function() {
+            testObject.start();
+            fakeConnection.callback();
+            assert(hasExecutedCommand);
+            assert(hasRunSecondCommand);
+            checkScore(100);
+        });
+    })
 });
 
 describe('CommandHasRunChecker', function() {
@@ -398,5 +422,21 @@ describe('Room Goodbye command', function() {
     });
     it('responds to chat messages', function() {
         assert(testObject.checkText(['player', '*'], {type : 'event', content : { '*' : 'Sweep leaves the room'}}));
+    });
+});
+
+describe('Close connection command', function() {
+    var testObject = undefined;
+    var fakeRoomId = 'RoomIdForGoodbyeTest';
+    beforeEach(function() {
+        testObject = createCloseConnectionCommand({id: fakeRoomId});
+        connectionClosedCalled = false;
+    });
+    it('calls close connection', function() {
+        testObject.execute(fakeConnection);
+        assert(connectionClosedCalled);
+    });
+    it('does not expect any messages', function() {
+        assert(!testObject.checkText);
     });
 });
