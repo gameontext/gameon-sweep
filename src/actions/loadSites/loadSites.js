@@ -16,69 +16,114 @@
 var request = require('request');
 var crypto = require("crypto");
 var DEFAULT_SITES_URL = 'https://game-on.org/map/v1/sites';
+var DEFAULT_SWAP_SITES_URL = 'https://game-on.org/map/v1/swapSites'
 
 function main(params) {
 
-    request.get(buildGetSitesOptions(params), allSitesResponseHandler);
+    request.get(buildGetSitesOptions(params), createAllSitesResponseHandler(params));
 
     return whisk.async();
 }
 
-function allSitesResponseHandler(error, response, body) {
-    var sites = JSON.parse(body);
-    var output = 'Have loaded ' + sites.length + ' sites.';
+function createAllSitesResponseHandler(params) {
+    return function(error, response, body) {
+        var sites = JSON.parse(body);
+        var output = 'Have loaded ' + sites.length + ' sites.';
+    
+        // Randomize the order so that we get different pairs to compare
+        shuffleArray(sites);
+    
+        responseHandlerBuilder = new SiteScoringCallbackBuilder(sites.length, request, params);
+    
+        sites.forEach(function(site, index) {
+            if (site.info && site.info.connectionDetails) {
+                var coord = site.coord;
+                var siteInformation = {
+                    id : site._id,
+                    name : site.info.name,
+                    distanceFromCentreSquared : coord.x * coord.x + coord.y * coord.y,
+                    connectionLocation : site.info.connectionDetails.target,
+                    connectionType : site.info.connectionDetails.type,
+                    connectionSecret : site.info.connectionDetails.token
+                }
+                whisk.invoke({
+                    name : 'checkSite',
+                    parameters : siteInformation,
+                    blocking : true,
+                    next : responseHandlerBuilder.createScoringCallback(index)
+                });
+            } else {
+                responseHandlerBuilder.createScoringCallback(index)();
+            }
+        });
+    }
+}
 
-    // Randomize the order so that we get different pairs to compare
-    shuffleArray(sites);
-
-    // Record what we get back from our call to the other action and
-    // call done when they have all returned
-    var expectedResponses = sites.length;
-    var responses = new Array(sites.length);
-    var lastResponse = undefined;
-    var onResponse = function(i) {
+function SiteScoringCallbackBuilder(sitesLength, httpRequest, params) {
+    var self = this; 
+    this.expectedResponses = sitesLength;
+    this.responses = new Array(sitesLength);
+    this.lastResponse = undefined;
+    this.httpRequest = httpRequest;
+    this.params = params;
+    this.createScoringCallback = function(index) {
         return function(error, activation) {
-            console.log("Have returned from " + i);
+            console.log("Have returned from " + index);
             if (error) {
-                console.log("It was an error: " + error);
-                responses[i] = {
+                console.log("It was an error: " + JSON.stringify(error));
+                self.responses[index] = {
                     "error" : error
                 };
             } else {
-                console.log("It worked!: " + activation);
-                responses[i] = (activation) ? activation.result : undefined;
+                console.log("It worked!: " + JSON.stringify(activation));
+                var result = (activation) ? activation.result : undefined;
+                self.responses[index] = result;
+                console.log(result);
+                if (result) {
+                    if (self.lastResponse) {
+                        if (self.needsSwapping(self.lastResponse, result)) {
+                            console.log('Swapping site locations ' + self.lastResponse.id + ' ' + result.id);
+                            httpRequest.post(buildSwapSitesOptions(self.params, self.lastResponse.id, result.id));
+                        }
+                        self.lastResponse = undefined;
+                    } else {
+                        self.lastResponse = result;
+                    }
+                }
             }
-            expectedResponses -= 1;
-            if (expectedResponses === 0) {
+            self.expectedResponses -= 1;
+            if (self.expectedResponses === 0) {
                 console.log("Nearly done, going to return: " + {
-                    "elements" : responses
+                    "elements" : self.responses
                 });
                 whisk.done({
-                    "elements" : responses
+                    "elements" : self.responses
                 });
             }
         }
     }
-
-    sites.forEach(function(site, index) {
-        if (site.info && site.info.connectionDetails) {
-            var siteInformation = {
-                id : site._id,
-                name : site.info.name,
-                connectionLocation : site.info.connectionDetails.target,
-                connectionType : site.info.connectionDetails.type,
-                connectionSecret : site.info.connectionDetails.token
-            }
-            whisk.invoke({
-                name : 'checkSite',
-                parameters : siteInformation,
-                blocking : true,
-                next : onResponse(index)
-            });
+    this.needsSwapping = function(firstResult, secondResult) {
+        if (firstResult.distanceFromCentreSquared > secondResult.distanceFromCentreSquared) {
+            return firstResult.score > secondResult.score;
         } else {
-            onResponse(index)();
+            return secondResult.score > firstResult.score;
         }
-    });
+    }
+}
+
+function buildSwapSitesOptions(params, id1, id2) {
+    var url;
+    if (params && params.mapSwapSitesUrl) {
+        url = params.mapSwapSitesUrl;
+    } else {
+        url = DEFAULT_SWAP_SITES_URL;
+    }
+    url = url + '?room1Id=' + id1 + '&room2Id=' + id2;
+    var options = {
+        url : url
+    };
+    addSecurityHeaders(options, params);
+    return options;
 }
 
 function buildGetSitesOptions(params) {
@@ -91,30 +136,30 @@ function buildGetSitesOptions(params) {
     var options = {
         url : url
     };
-    if (params && params.sweepId && params.sweepApiKey) {
-        addSecurityHeaders(options, params);
-    }
+    addSecurityHeaders(options, params);
     return options;
 }
 
 function addSecurityHeaders(options, params) {
-    var now = new Date()
-    var timestamp = now.toISOString()
-
-    console.log("Now!: " + now)
-    console.log("Timestamp: " + timestamp)
-
-    var sweepId = params.sweepId;
-    var allParams = sweepId + timestamp
-    var hash = crypto.createHmac('sha256', params.sweepApiKey)
-            .update(allParams).digest('base64')
-
-    console.log("HASH : " + hash)
-    options.headers = {
-        'Content-Type' : 'application/json',
-        'gameon-id' : sweepId,
-        'gameon-date' : timestamp,
-        'gameon-signature' : hash
+    if (params && params.sweepId && params.sweepApiKey) {
+        var now = new Date()
+        var timestamp = now.toISOString()
+    
+        console.log("Now!: " + now)
+        console.log("Timestamp: " + timestamp)
+    
+        var sweepId = params.sweepId;
+        var allParams = sweepId + timestamp
+        var hash = crypto.createHmac('sha256', params.sweepApiKey)
+                .update(allParams).digest('base64')
+    
+        console.log("HASH : " + hash)
+        options.headers = {
+            'Content-Type' : 'application/json',
+            'gameon-id' : sweepId,
+            'gameon-date' : timestamp,
+            'gameon-signature' : hash
+        }
     }
 }
 
