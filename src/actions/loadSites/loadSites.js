@@ -81,7 +81,14 @@ function SiteScoringCallbackBuilder(sitesLength, httpRequest, params) {
                     if (self.lastResponse) {
                         if (self.needsSwapping(self.lastResponse, result)) {
                             console.log('Swapping site locations ' + self.lastResponse.id + ' ' + result.id);
-                            httpRequest.post(buildSwapSitesOptions(self.params, self.lastResponse.id, result.id));
+                            var firstRoomId = self.lastResponse.id;
+                            var secondRoomId = result.id;
+                            httpRequest.post(buildSwapSitesOptions(self.params, firstRoomId, secondRoomId), function(error, response, body) {
+                                console.log('Received response from ' + firstRoomId + ' swapping with ' + secondRoomId);
+                                console.log('Error was ' + error);
+                                console.log('Response was ' + JSON.stringify(response));
+                                console.log('Body was ' + JSON.stringify(body));
+                            });
                         } else {
                             console.log('No need to swap sites '  + self.lastResponse.id + ' ' + result.id);
                         }
