@@ -68,22 +68,22 @@ function SiteScoringCallbackBuilder(sitesLength, httpRequest, params) {
     this.params = params;
     this.createScoringCallback = function(index) {
         return function(error, activation) {
-            console.log("Have returned from " + index);
             if (error) {
-                console.log("It was an error: " + JSON.stringify(error));
+                console.log("Result from " + index + " was an error: " + JSON.stringify(error));
                 self.responses[index] = {
                     "error" : error
                 };
             } else {
-                console.log("It worked!: " + JSON.stringify(activation));
+                console.log("Result from " + index + ": " + JSON.stringify(activation));
                 var result = (activation) ? activation.result : undefined;
                 self.responses[index] = result;
-                console.log(result);
                 if (result) {
                     if (self.lastResponse) {
                         if (self.needsSwapping(self.lastResponse, result)) {
                             console.log('Swapping site locations ' + self.lastResponse.id + ' ' + result.id);
                             httpRequest.post(buildSwapSitesOptions(self.params, self.lastResponse.id, result.id));
+                        } else {
+                            console.log('No need to swap sites '  + self.lastResponse.id + ' ' + result.id);
                         }
                         self.lastResponse = undefined;
                     } else {
@@ -93,12 +93,11 @@ function SiteScoringCallbackBuilder(sitesLength, httpRequest, params) {
             }
             self.expectedResponses -= 1;
             if (self.expectedResponses === 0) {
-                console.log("Nearly done, going to return: " + {
-                    "elements" : self.responses
-                });
-                whisk.done({
-                    "elements" : self.responses
-                });
+                var returnObject = {
+                    "sitesChecked" : self.responses
+                };
+                console.log('Have all responses back so return with ' + JSON.stringify(returnObject));
+                whisk.done(returnObject);
             }
         }
     }
@@ -145,15 +144,11 @@ function addSecurityHeaders(options, params) {
         var now = new Date()
         var timestamp = now.toISOString()
     
-        console.log("Now!: " + now)
-        console.log("Timestamp: " + timestamp)
-    
         var sweepId = params.sweepId;
         var allParams = sweepId + timestamp
         var hash = crypto.createHmac('sha256', params.sweepApiKey)
                 .update(allParams).digest('base64')
     
-        console.log("HASH : " + hash)
         options.headers = {
             'Content-Type' : 'application/json',
             'gameon-id' : sweepId,

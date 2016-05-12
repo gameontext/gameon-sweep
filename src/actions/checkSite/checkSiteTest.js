@@ -62,8 +62,11 @@ describe('CommandRunner', function() {
         assert.equal(doneParams.score, expectedScore);
     }
     describe('Single command running', function() {
+        var fakeDistanceFromCentreSquared = 42;
+        var fakeId = 'fake';
         beforeEach(function() {
-            testObject = createCommandRunner([fakeCommandThatRegistersConnection]);
+            testObject = createCommandRunner([fakeCommandThatRegistersConnection], {distanceFromCentreSquared : fakeDistanceFromCentreSquared,
+                                                                                    id : fakeId});
         });
         it('runs a single command', function() {
             testObject.start();
@@ -114,6 +117,13 @@ describe('CommandRunner', function() {
                 done();
             }, 1500);
         });
+        it('Returns the id and distance of the room it was testing', function() {
+            testObject.start();
+            fakeConnection.callback();
+            
+            assert.equal(fakeId, doneParams.id);
+            assert.equal(fakeDistanceFromCentreSquared, doneParams.distanceFromCentreSquared);
+        });
     });
     describe('Two commands running', function() {
         var hasRunSecondCommand = false;
@@ -130,7 +140,7 @@ describe('CommandRunner', function() {
                         return true;
                     }
             }
-            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatJustReturnsTrue]);
+            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatJustReturnsTrue], {});
         });
        it('Runs two valid commands and returns a score of 200', function() {
            testObject.start();
@@ -176,7 +186,7 @@ describe('CommandRunner', function() {
                         return object && "fish" === object.value;
                     }]
             }
-            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatHasTwoExpectedTextMessages]);
+            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatHasTwoExpectedTextMessages], {});
         });
         it('Gives a score for each check', function() {
             testObject.start();
@@ -230,7 +240,7 @@ describe('CommandRunner', function() {
                         hasRunSecondCommand = true;
                     }
             }
-            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatHasTwoExpectedTextMessages]);
+            testObject = createCommandRunner([fakeCommandThatRegistersConnection, fakeCommandThatHasTwoExpectedTextMessages], {});
         });
         it('completes after running the command without assigning it a score or waiting', function() {
             testObject.start();

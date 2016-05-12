@@ -23,18 +23,21 @@ global.main = function(params) {
                                              createRoomHelloCommand(params),
                                              createChatCommand(params),
                                              createRoomGoodbyeCommand(params),
-                                             createCloseConnectionCommand(params)]);
+                                             createCloseConnectionCommand(params)],
+                                             params);
     commandRunner.start();
     whisk.async();
 }
 
-function createCommandRunner(commands) {
+function createCommandRunner(commands, params) {
     var commandRunner = {
             commands : commands,
             commandRunChecker : null,
             connection : undefined,
             score : 0,
             lastRunCommand: -1,
+            distanceFromCentreSquared : params.distanceFromCentreSquared,
+            id : params.id,
             start: function() {
                 this.runNextCommandOrFinish();
             },
@@ -66,7 +69,9 @@ function createCommandRunner(commands) {
                 }
             },
             reportDone: function() {
-                whisk.done({score: this.score});
+                whisk.done({score: this.score, 
+                            id: this.id, 
+                            distanceFromCentreSquared: this.distanceFromCentreSquared});
             },
             connectionCallback: function(connection) {
                 commandRunner.connection = connection;
