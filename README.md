@@ -4,26 +4,37 @@
 
 A service that checks if rooms are still working and moves them if not
 
-## A whisk in progress
+## Whisk Actions
 
-This branch contains a few thoughts about how a whisk implementation might look.
+Sweep works by having two actions, one that interacts with the map API to load and move rooms and one that checks an individual rooms web socket.  The flow is as follows:
 
-The rough plan is that there will be (at least) two actions.  The first will go to the map/mediator and load all of the available sites.  It will then iterate through these and for each site call into a second action that creates a web socket to poke the site.  Once it has been poked something (tbd - probably the same action that is creating the web socket) will assign it a score based on how the poking went then another thing (tbd - probably another action) will then do something (tbd - probably either move it closer to the centre of the map for a good score or further away/off the map for a bad score) to it based on that score.
 
-I've started working on the action to load the rooms and connect via a web socket.  There are a few caveats with each:
+1.  The loadSites action calls map/v1/sites to load all the sites using Sweep's secret to include the connection details 
+2.  loadSites asynchronously invokes checkSite for each non-empty site returned from the map in a random order
+3.  checkSite connects to the web sockets and sends the following messages to the web socket before waiting for an appropriate response:
+    1.  Connect to the web socket, either with or without the room secret depending on whether one is provided.  Wait for an ack message back from the room.
+    2.  Send a roomHello message.  Wait for a "location" message and an "event" message back saying sweep has entered the room.
+    3.  Send a chat message.  Wait for it to send the chat broadcast to the room.
+    4.  Send a roomGoodbye message.  Wait for an "event" message saying sweep has left the room.
+    5.  Close the connection.
+    For each check that is succesfully received the room will be award 100 points with a 1 point penalty for every second it takes to return.  So a room that takes 5 seconds to send an ack message will receive 95 points for that check.  This means there is a maximum score of 500 points.  After 20 seconds each check will time out and the room will score -30.  There is also a -10 penalty for any errors that are sent to the web socket.  If the first check (connecting) fails no other checks will be performed so the minimum score a room could receive is -40.
+4.  When the checks are complete checkSite will return the score.
+5.  Each time a pair of scores have been received by loadSites they are compared, if the higher score is further from the centre then the room positions are swapped so over time higher scoring rooms will reach the centre positions.
+6.  When all the sites have been checked the loadSites sends the results to whisk.
 
-* `src/actions/loadSites`: This contains the code to load the sites and connect to the other action that connects via a web socket to the site.  Currently it needs to have the following TODOs:
-  * Doing something with the results from the invocations to the web socket
-  * Add the location of the web socket to the params.  Currently the map doesn't return this so need some special auth for the NPC to say we're allowed to get it.
-* `src/actions/checkSite`: This contains the code to create a web socket.  Whisk only allows a single JavaScript file but we need to use the nodejs-websocket node library.  Luckily there is a webpack thing that you can use in node to transform this into a single file which is done by calling:
+Each of the actions are setup to run mocha tests that can be executed by running:
+
+        npm test
+
+Whisk only allows a single JavaScript file but we need to use the nodejs-websocket node library on checkSite which isn't included in Whisk.  Luckily there is a webpack thing that you can use in node to transform this into a single file which is done by calling:
 
         npm run build
 
-   as per the article [here.](https://developer.ibm.com/openwhisk/2016/03/17/bundling-openwhisk-actions-with-webpack/)  TODOs:
-  * Tests (see the example using mocha on load sites)
-  * Actually connect to the ws supplied in the params.
-  * Actually do some checks on the web socket connection
-  * This seems to fail regularly.  It says that it isn't returning a valid JSON object.  I'm not sure what happens here, I tried to put a try catch around the connection but that isn't being triggered.  It may be that it's the other end of the web socket that has an error or it just times out or something.  As the load sites doesn't pass in a ws address it just connects to the web socket sample that I am hosting on my own Bluemix account.
+as per the article [here.](https://developer.ibm.com/openwhisk/2016/03/17/bundling-openwhisk-actions-with-webpack/).
+
+You can also execute both actions locally by running:
+
+        node runInNode
   
 To get these into whisk you need to setup your whisk CLI as described in the [Bluemix documentation](https://new-console.ng.bluemix.net/openwhisk/cli).  In addition you need to set the namespace to the one that Whisk will use by default (for me this was iain.duncan@uk.ibm.com).  Do this with the following and then [create the actions](https://new-console.ng.bluemix.net/docs/openwhisk/openwhisk_actions.html#openwhisk_create_action_js):
 
@@ -40,27 +51,9 @@ In addition you can create a trigger to [run this](https://new-console.ng.bluemi
     wsk trigger create periodic --feed /whisk.system/alarms/alarm --param cron "0 0 * * * *"
     wsk rule create --enable periodicallyRunLoadSites periodic loadSites
 
-### Local testing
-
-To be able to execute these locally you'll need to mock out the whisk calls.  I think something like this may work:
-
-    var action = requrie ('<actual_action_js_file>')
-    var whisk = {
-        async = function() {},
-        done = function() {},
-        invoke = function() {}
-    }
-    action.main();
-
-Assuming this in local.js then calling:
-
-    node local.js
-
-Should run the action.
-
 ### Dockerisation for local testing
 
-At present this isn't setup to run in a Docker container so it will be hard to do local integration tests with the other services.  I think that it will be easier to run this using node and mock out the whisk.js that is available when running on Bluemix rather than standing up a local instance of Whisk (although this is an option as explained on their [github](https://github.com/openwhisk/openwhisk)).  Doing it this way does mean that it isn't really running what we'd run in production and will have to do some special linking code that whisk would have done for us through action invocations.
+At present this isn't setup to run in a Docker container so it will be hard to do local integration tests with the other services.  I think that it will be easier to run this using node and the mocked out the whisk.js that is already written rather than standing up a local instance of Whisk (although this is an option as explained on their [github](https://github.com/openwhisk/openwhisk)).  Doing it this way does mean that it isn't really running what we'd run in production and will have to do some special linking code that whisk would have done for us through action invocations.
 
 ### Deployment
 

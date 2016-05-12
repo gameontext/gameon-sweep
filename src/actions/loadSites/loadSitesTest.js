@@ -27,10 +27,24 @@ describe('Load sites', function() {
             doneCalled = false;
         });
         it('should invoke whisk.invoke for each site', function() {
-            allSitesResponseHandler(null, null, JSON.stringify([ {
-                '_id' : 'first'
+            createAllSitesResponseHandler()(null, null, JSON.stringify([ {
+                '_id' : 'first',
+                'coord' : {
+                    'x' : -3,
+                    'y' : 4
+                },
+                'info' : {
+                    'connectionDetails' : {}
+                }
             }, {
-                '_id' : 'second'
+                '_id' : 'second',
+                'coord' : {
+                    'x' : -2,
+                    'y' : 4
+                },
+                'info' : {
+                    'connectionDetails' : {}
+                }
             } ]));
             assert.equal(invokedParams.length, 2);
         });
@@ -40,8 +54,12 @@ describe('Load sites', function() {
             var testConnectionSecret = 'testSecret';
             var testConnectionLocation = 'ws://testlocation';
             var testConnectionType = 'websocket';
-            allSitesResponseHandler(null, null, JSON.stringify([ {
+            createAllSitesResponseHandler()(null, null, JSON.stringify([ {
                 '_id' : testId,
+                'coord' : {
+                    'x' : -3,
+                    'y' : 4
+                },
                 'info' : {
                     'name' : testName,
                     'connectionDetails' : {
@@ -56,6 +74,7 @@ describe('Load sites', function() {
             assert(params.blocking);
             assert(params.next);
             assert.equal(params.parameters.id, testId);
+            assert.equal(params.parameters.distanceFromCentreSquared, 25);
             assert.equal(params.parameters.name, testName);
             assert.equal(params.parameters.connectionType, testConnectionType);
             assert.equal(params.parameters.connectionSecret,
@@ -64,11 +83,58 @@ describe('Load sites', function() {
                     testConnectionLocation);
         });
         it('should call whisk done when complete', function() {
-            allSitesResponseHandler(null, null, JSON.stringify([ {
-                '_id' : 'first'
+            createAllSitesResponseHandler()(null, null, JSON.stringify([ {
+                '_id' : 'first',
+                'coord' : {
+                    'x' : -3,
+                    'y' : 4
+                },
+                'info' : {
+                    'connectionDetails' : {}
+                }
+            }, {
+                '_id' : 'second',
+                'coord' : {
+                    'x' : -2,
+                    'y' : 4
+                },
+                'info' : {
+                    'connectionDetails' : {}
+                }
+            } ]));
+            assert(doneCalled);
+        });
+        it('should not invoke if there are no connection details', function() {
+            createAllSitesResponseHandler()(null, null, JSON.stringify([ {
+                '_id' : 'first',
+                'coord' : {
+                    'x' : -3,
+                    'y' : 4
+                },
+                'info' : {
+                    'connectionDetails' : {}
+                }
+            }, {
+                '_id' : 'second',
+                'info' : { }
+            } ]));
+            assert.equal(invokedParams.length, 1);
+            assert(doneCalled);
+        });
+        it('should not invoke if there is no info', function() {
+            createAllSitesResponseHandler()(null, null, JSON.stringify([ {
+                '_id' : 'first',
+                'coord' : {
+                    'x' : -3,
+                    'y' : 4
+                },
+                'info' : {
+                    'connectionDetails' : {}
+                }
             }, {
                 '_id' : 'second'
             } ]));
+            assert.equal(invokedParams.length, 1);
             assert(doneCalled);
         });
     });
@@ -108,5 +174,58 @@ describe('Load sites', function() {
                     var result = buildGetSitesOptions();
                     assert(!result.headers);
                 });
+    });
+});
+describe('shuffle array', function() {
+    it ('should produce an array in a different order of the input', function() {
+        var input = ["a", "b", "c", "d", "e", "f", "g", "h", "j", "k"];
+        var output = ["a", "b", "c", "d", "e", "f", "g", "h", "j", "k"];
+        shuffleArray(output)
+        try {
+            assert.deepEqual(output, input);
+            fail("Arrays were equal after the shuffle. Maybe try again, this will happen once in every 3.6 million attempts");
+        } catch(err) {
+            // pass
+        }
+        input.forEach(function(item) {
+            assert(output.indexOf(item) != -1);
+        });
+    });
+});
+describe('SiteScoringCallbackBuilder', function() {
+    var postCalled = false;
+    var options = undefined;
+    var fakeHttpRequest;
+    beforeEach(function() {
+        postCalled = false;
+        fakeHttpRequest = {
+            post : function(optionsArg, callback) {
+                postCalled = true;
+                options = optionsArg;
+            }
+        }
+    });
+    it('should swap a low scoring room that is close to the centre for a high scoring one far from the centre', function() {
+        var fakeSiteUrl = 'http://fakemap/map/v1/swapSites';
+        var npcId = 'sweep';
+        var testObject = new SiteScoringCallbackBuilder(2, fakeHttpRequest, {'mapSwapSitesUrl' : fakeSiteUrl,
+                                                                             'sweepId' : npcId,
+                                                                             'sweepApiKey' : 'sweepApi'});
+        testObject.createScoringCallback(0)(undefined, {'result': {'score': 1, 'distanceFromCentreSquared': 1, 'id': 'fakeSite1'}});
+        testObject.createScoringCallback(1)(undefined, {'result': {'score': 2, 'distanceFromCentreSquared': 4, 'id': 'fakeSite2'}});
+        assert(postCalled);
+        assert.equal(fakeSiteUrl + '?room1Id=fakeSite1&room2Id=fakeSite2', options.url);
+        assert.equal(options.headers['gameon-id'], npcId);
+        assert(options.headers['gameon-date']);
+        Date.parse(options.headers['gameon-date']);
+        assert(options.headers['gameon-signature']);
+    });
+    it('should not swap a low scoring room that is already further from the centre', function() {
+        var fakeSiteUrl = 'http://fakemap/map/v1/swapSites';
+        var npcId = 'sweep';
+        var testObject = new SiteScoringCallbackBuilder(2, fakeHttpRequest);
+        testObject.createScoringCallback(0)(undefined, {'result': {'score': 1, 'distanceFromCentreSquared': 4, 'id': 'fakeSite1'}});
+        testObject.createScoringCallback(1)(undefined, {'result': {'score': 2, 'distanceFromCentreSquared': 1, 'id': 'fakeSite2'}});
+        assert(!postCalled);
     });
 });
