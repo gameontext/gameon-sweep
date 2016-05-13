@@ -15,7 +15,7 @@
  ******************************************************************************/
 var ws = require("nodejs-websocket");
 var crypto = require("crypto");
-var DEFAULT_TIMEOUT = 20000;
+var DEFAULT_TIMEOUT = 6000;
 const PROTOCOL = 'mediator,1.1';
 
 global.main = function(params) {
