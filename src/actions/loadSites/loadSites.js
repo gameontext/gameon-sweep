@@ -18,7 +18,7 @@ var crypto = require("crypto");
 var DEFAULT_SITES_URL = 'https://game-on.org/map/v1/sites';
 var DEFAULT_SWAP_SITES_URL = 'https://game-on.org/map/v1/swapSites'
 
-function main(params) {
+global.main = function(params) {
 
     request.get(buildGetSitesOptions(params), createAllSitesResponseHandler(params));
 
@@ -27,35 +27,39 @@ function main(params) {
 
 function createAllSitesResponseHandler(params) {
     return function(error, response, body) {
-        var sites = JSON.parse(body);
-        var output = 'Have loaded ' + sites.length + ' sites.';
-    
-        // Randomize the order so that we get different pairs to compare
-        shuffleArray(sites);
-    
-        responseHandlerBuilder = new SiteScoringCallbackBuilder(sites.length, request, params);
-    
-        sites.forEach(function(site, index) {
-            if (site.info && site.info.connectionDetails) {
-                var coord = site.coord;
-                var siteInformation = {
-                    id : site._id,
-                    name : site.info.name,
-                    distanceFromCentreSquared : coord.x * coord.x + coord.y * coord.y,
-                    connectionLocation : site.info.connectionDetails.target,
-                    connectionType : site.info.connectionDetails.type,
-                    connectionSecret : site.info.connectionDetails.token
+        if (error) {
+            whisk.error("Error calling all sites: " + error);
+        } else {
+            var sites = JSON.parse(body);
+            var output = 'Have loaded ' + sites.length + ' sites.';
+        
+            // Randomize the order so that we get different pairs to compare
+            shuffleArray(sites);
+        
+            var responseHandlerBuilder = new SiteScoringCallbackBuilder(sites.length, request, params);
+        
+            sites.forEach(function(site, index) {
+                if (site.info && site.info.connectionDetails) {
+                    var coord = site.coord;
+                    var siteInformation = {
+                        id : site._id,
+                        name : site.info.name,
+                        distanceFromCentreSquared : coord.x * coord.x + coord.y * coord.y,
+                        connectionLocation : site.info.connectionDetails.target,
+                        connectionType : site.info.connectionDetails.type,
+                        connectionSecret : site.info.connectionDetails.token
+                    }
+                    whisk.invoke({
+                        name : 'checkSite',
+                        parameters : siteInformation,
+                        blocking : true,
+                        next : responseHandlerBuilder.createScoringCallback(index)
+                    });
+                } else {
+                    responseHandlerBuilder.createScoringCallback(index)();
                 }
-                whisk.invoke({
-                    name : 'checkSite',
-                    parameters : siteInformation,
-                    blocking : true,
-                    next : responseHandlerBuilder.createScoringCallback(index)
-                });
-            } else {
-                responseHandlerBuilder.createScoringCallback(index)();
-            }
-        });
+            });
+        }
     }
 }
 

@@ -22,11 +22,11 @@ Sweep works by having two actions, one that interacts with the map API to load a
 5.  Each time a pair of scores have been received by loadSites they are compared, if the higher score is further from the centre then the room positions are swapped so over time higher scoring rooms will reach the centre positions.
 6.  When all the sites have been checked the loadSites sends the results to whisk.
 
-Each of the actions are setup to run mocha tests that can be executed by running:
+Each of the actions are setup to run mocha tests that can be executed by running the following from each action's directory:
 
         npm test
 
-Whisk only allows a single JavaScript file but we need to use the nodejs-websocket node library on checkSite which isn't included in Whisk.  Luckily there is a webpack thing that you can use in node to transform this into a single file which is done by calling:
+Whisk only allows a single JavaScript file but we need to use the nodejs-websocket node library on checkSite and crypto on loadSites which aren't included in Whisk.  Luckily there is a webpack thing that you can use in node to transform this into a single file which is done by calling in each action's directory:
 
         npm run build
 
@@ -39,7 +39,7 @@ You can also execute both actions locally by running:
 To get these into whisk you need to setup your whisk CLI as described in the [Bluemix documentation](https://new-console.ng.bluemix.net/openwhisk/cli).  In addition you need to set the namespace to the one that Whisk will use by default (for me this was iain.duncan@uk.ibm.com).  Do this with the following and then [create the actions](https://new-console.ng.bluemix.net/docs/openwhisk/openwhisk_actions.html#openwhisk_create_action_js):
 
     wsk property set --namespace <your_namespace>
-    wsk action create loadSites src/actions/loadSites/loadSites.js
+    wsk action create loadSites src/actions/loadSites/dist/bundle.js
     wsk action create checkSite src/actions/checkSite/dist/bundle.js
 
 You can then manually trigger the chain with the following:
