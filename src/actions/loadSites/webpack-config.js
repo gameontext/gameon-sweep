@@ -22,7 +22,12 @@ module.exports = {
   ],
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: 'bundle.js'
+    filename: 'bundle.js',
+    libraryTarget: "commonjs"
+  },
+  externals: {
+      "request": true,
+      "crypto": false
   },
   module: {
     loaders: [

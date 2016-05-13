@@ -26,7 +26,7 @@ global.main = function(params) {
                                              createCloseConnectionCommand(params)],
                                              params);
     commandRunner.start();
-    whisk.async();
+    return whisk.async();
 }
 
 function createCommandRunner(commands, params) {
@@ -62,7 +62,7 @@ function createCommandRunner(commands, params) {
                 } else if (checks instanceof Function) {
                     this.commandRunChecker.waitForTextMessageFromConnection(checks, this.messageReceivedCallback, this.timeoutCallback);
                 } else {
-                    for (i = 0; i < checks.length; i++) {
+                    for (var i = 0; i < checks.length; i++) {
                         var check = checks[i];
                         this.commandRunChecker.waitForTextMessageFromConnection(check, this.messageReceivedCallback, this.timeoutCallback);
                     }
@@ -188,11 +188,11 @@ function createConnectCommand(params) {
         description : 'connect to web socket and waiting for ack message',
         params : params,
         execute : function(nullConnection, connectionCreatedCallback) {
-            connection = ws.connect(this.getConnectionLocation(), this.getWsConnectionOptions());
+            var connection = ws.connect(this.getConnectionLocation(), this.getWsConnectionOptions());
             connectionCreatedCallback(connection);
         },
         getWsConnectionOptions : function() {
-            headers = {
+            var headers = {
                 'gameon-protocol' : PROTOCOL
             };
             if (this.params && this.params.connectionSecret) {
@@ -204,7 +204,7 @@ function createConnectCommand(params) {
                 headers['gameon-date'] = timestamp;
                 headers['gameon-signature'] = hash;
             }
-            options = {
+            var options = {
                 'extraHeaders' : headers
             };
             return options;
