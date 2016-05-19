@@ -51,10 +51,11 @@ describe('Load sites', function() {
         it('should pass the correct params to whisk.invoke', function() {
             var testId = 'testId';
             var testName = 'testName';
+            var testNamespace = 'testNamespace';
             var testConnectionSecret = 'testSecret';
             var testConnectionLocation = 'ws://testlocation';
             var testConnectionType = 'websocket';
-            createAllSitesResponseHandler()(null, null, JSON.stringify([ {
+            createAllSitesResponseHandler({namespace: testNamespace})(null, null, JSON.stringify([ {
                 '_id' : testId,
                 'coord' : {
                     'x' : -3,
@@ -70,7 +71,7 @@ describe('Load sites', function() {
                 }
             } ]));
             var params = invokedParams[0];
-            assert.equal(params.name, 'checkSite');
+            assert.equal(params.name, '/' + testNamespace + '/checkSite');
             assert(params.blocking);
             assert(params.next);
             assert.equal(params.parameters.id, testId);
