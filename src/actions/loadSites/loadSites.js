@@ -49,8 +49,9 @@ function createAllSitesResponseHandler(params) {
                         connectionType : site.info.connectionDetails.type,
                         connectionSecret : site.info.connectionDetails.token
                     }
+                    var actionName = (params && params.namespace) ? '/' + params.namespace + '/checkSite' : 'checkSite';
                     whisk.invoke({
-                        name : 'checkSite',
+                        name: actionName,
                         parameters : siteInformation,
                         blocking : true,
                         next : responseHandlerBuilder.createScoringCallback(index)
