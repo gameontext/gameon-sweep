@@ -1,7 +1,11 @@
 .gradle
 .classpath
+.env
 .project
 .settings
+.idea/workspace.xml
+.idea/tasks.xml
+docker-compose.override.yml
 /bin
 /build
 /src/actions/*/dist

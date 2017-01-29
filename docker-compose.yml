@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+
+  sweep-dev:
+    build:
+      context: .
+    volumes:
+      - '.:/srv/sweep'
+    environment:
+      - USE_COMPOSE=1
