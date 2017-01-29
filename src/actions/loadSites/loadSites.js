@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2016 IBM Corp.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
  * the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -15,8 +15,8 @@
  ******************************************************************************/
 var request = require('request');
 var crypto = require("crypto");
-var DEFAULT_SITES_URL = 'https://game-on.org/map/v1/sites';
-var DEFAULT_SWAP_SITES_URL = 'https://game-on.org/map/v1/swapSites'
+var DEFAULT_SITES_URL = 'https://gameontext.org/map/v1/sites';
+var DEFAULT_SWAP_SITES_URL = 'https://gameontext.org/map/v1/swapSites'
 
 global.main = function(params) {
 
@@ -32,12 +32,12 @@ function createAllSitesResponseHandler(params) {
         } else {
             var sites = JSON.parse(body);
             var output = 'Have loaded ' + sites.length + ' sites.';
-        
+
             // Randomize the order so that we get different pairs to compare
             shuffleArray(sites);
-        
+
             var responseHandlerBuilder = new SiteScoringCallbackBuilder(sites.length, request, params);
-        
+
             sites.forEach(function(site, index) {
                 if (site.info && site.info.connectionDetails) {
                     var coord = site.coord;
@@ -65,7 +65,7 @@ function createAllSitesResponseHandler(params) {
 }
 
 function SiteScoringCallbackBuilder(sitesLength, httpRequest, params) {
-    var self = this; 
+    var self = this;
     this.expectedResponses = sitesLength;
     this.responses = new Array(sitesLength);
     this.lastResponse = undefined;
@@ -155,12 +155,12 @@ function addSecurityHeaders(options, params) {
     if (params && params.sweepId && params.sweepApiKey) {
         var now = new Date()
         var timestamp = now.toISOString()
-    
+
         var sweepId = params.sweepId;
         var allParams = sweepId + timestamp
         var hash = crypto.createHmac('sha256', params.sweepApiKey)
                 .update(allParams).digest('base64')
-    
+
         options.headers = {
             'Content-Type' : 'application/json',
             'gameon-id' : sweepId,
