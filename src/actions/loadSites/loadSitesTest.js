@@ -155,7 +155,7 @@ describe('Load sites', function() {
                 'sweepId' : 'sweep',
                 'sweepApiKey' : 'sweepApi'
             });
-            assert.equal(result.url, 'https://game-on.org/map/v1/sites');
+            assert.equal(result.url, 'https://gameontext.org/map/v1/sites');
         });
         it('should include the HMAC header and associated information',
                 function() {
