@@ -1,0 +1,32 @@
+{
+  "name": "check-site",
+  "version": "1.0.0",
+  "description": "Check the capabilities of a single Game On! site.",
+  "main": "checkSite.js",
+  "scripts": {
+    "test": "mocha test/test*.js",
+    "testdesc": "mocha test/testDescription.js",
+    "testendpoint": "mocha test/testEndpoint.js",
+    "testfetch": "mocha test/testFetchSite.js",
+    "testrepo": "mocha test/testRepository.js",
+    "testroom": "mocha test/testRoom.js"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "express": "^4.15.5",
+    "mocha": "^3.5.3",
+    "should": "^13.1.0",
+    "webpack": "^3.6.0"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "openwhisk": "^3.7.0",
+    "request": "^2.82.0",
+    "request-promise": "^4.2.2",
+    "ws": "^3.2.0"
+  }
+}

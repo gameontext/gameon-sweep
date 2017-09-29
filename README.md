@@ -4,6 +4,24 @@
 
 A service that checks if rooms are still working and moves them if not
 
+## Docker for local dev/test
+
+The Docker image will contain bx plugins, node, npm modules, etc.
+
+    docker-compose build
+    docker-compose run --rm sweep-dev /bin/bash
+
+## Notes on building:
+
+* `bin/recursive-dev.sh` recurses project folders (avoiding node_modules) and installs those direct dependencies globally.
+* `bin/recursive-npm.sh` recurses project folders (avoiding node_modules) to execute the given npm command.
+* This whole thing requires bash. I'm lazy. 
+
+## Available packages
+
+* https://console.bluemix.net/docs/openwhisk/openwhisk_reference.html#openwhisk_ref_javascript_environments
+* https://github.com/apache/incubator-openwhisk/blob/master/docs/reference.md#javascript-runtime-environments
+
 ## Whisk Actions
 
 Sweep works by having two actions, one that interacts with the map API to load and move rooms and one that checks an individual rooms web socket.  The flow is as follows:
