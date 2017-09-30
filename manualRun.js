@@ -15,7 +15,7 @@
  ******************************************************************************/
 const Site = require('./actions/Site.js');
 const ScoreBook = require('./actions/ScoreBook.js')
-const Promise = require("bluebird");
+const Promise = require('bluebird');
 const Cloudant = require('cloudant');
 
 // 3 second retry interval
@@ -25,6 +25,9 @@ let url = process.env['MAP_URL'] || 'https://gameontext.org/map/v1/sites/';
 let sweep_id = process.env['SWEEP_ID'] || '';
 let sweep_secret = process.env['SWEEP_SECRET'] || '';
 
+let cloudant = Cloudant({url: process.env.CLOUDANT_URL});
+let scorebook = new ScoreBook(cloudant, 'sweep_score');
+
 site.fetchAllSites(url, sweep_id, sweep_secret)
 .then(function(all_sites) {
   console.log(all_sites.length + ' sites to score... ');
@@ -33,18 +36,20 @@ site.fetchAllSites(url, sweep_id, sweep_secret)
       console.log(`Skipping ${i}: ${all_sites[i]._id} is empty`);
     } else {
       console.log(`Checking ${i}: ${all_sites[i]._id}`);
-      per_site(all_sites[i]._id);
+
+      Promise.delay(10000*i).then(function() {
+        return per_site(all_sites[i]._id)
+               .catch(handleError);
+      });
     }
   }
 });
-
 
 // actionFetch
 function per_site(site_id) {
   // Fetch site takes input parameters, and converts
   // them into a list of whisk-style action definitions
   site.fetchSite(url, site_id, sweep_id, sweep_secret)
-  .delay(10000) // slow down
   .then(function (actionList) {
 
     // We'll construct the set of promises by decomposing the
@@ -62,23 +67,20 @@ function per_site(site_id) {
     .then(function (results) {
       // Aggretate all scores
       var finalScore = site.totalScore(results);
-
-      let cloudant = Cloudant({url: process.env.CLOUDANT_URL});
-      let scorebook = new ScoreBook(cloudant, 'sweep_score');
-      scorebook.keepScore(site_id, finalScore);
+      return scorebook.keepScore(site_id, finalScore);
     })
     .catch(handleError);
   })
   .catch(handleError);
+
+  return Promise.resolve(true);
 }
-
-
 
 // Minimal unpacking of whisk-style parameters
 var dewhisk = {
   checkDescription: function (params) {
     // see actionDescription
-    return site.checkDescription(params.info);
+    return site.checkDescription(params.info, params.site);
   },
 
   checkEndpoint: function (params) {

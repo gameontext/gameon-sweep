@@ -10,6 +10,7 @@
     "testfetch": "mocha test/testFetchSite.js",
     "testrepo": "mocha test/testRepository.js",
     "testroom": "mocha test/testRoom.js",
+    "testscore": "mocha test/testScore.js",
     "single": ""
   },
   "author": "",

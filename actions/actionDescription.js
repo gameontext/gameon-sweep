@@ -22,7 +22,7 @@ const Site = require('./Site.js');
  */
 function main (params) {
   var site = new Site(1); // no outbound.
-  return site.checkDescription(params.info);
+  return site.checkDescription(params.info, params.site);
 }
 
 module.exports.desc = main;

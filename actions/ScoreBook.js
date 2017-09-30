@@ -55,6 +55,9 @@ function insert(cloudantDb, score) {
         reject(error);
       }
     });
+  })
+  .catch(function(err) {
+    Promise.reject(err);
   });
 }
 
