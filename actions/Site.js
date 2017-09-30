@@ -64,11 +64,22 @@ class Site {
   bodyToActions(body) {
     var actions = [];
 
+    // Additional information for checkDescription (site)
+    var descParams = {};
+    if ( body.type === 'room' ) {
+      descParams.site = {};
+      descParams.site.owner = body.owner;
+      if ( body.coord ) {
+        descParams.site.path = Math.abs(body.coord.x) + Math.abs(body.coord.y);
+      }
+    }
+
     // Construct appropriate sweep actions based on registration information
     if ( body.info ) {
+      descParams.info = body.info;
       actions.push({
         actionName: 'sweep/checkDescription',
-        params: { info: body.info }
+        params: descParams
       });
 
       if ( body.info.repositoryUrl ) {
@@ -97,8 +108,9 @@ class Site {
    * Fetch Room/Site information from the map service (using the
    * request-promise object passed to ctor)
    */
-  checkDescription(info) {
+  checkDescription(info, site) {
     var result = {};
+    result.site = site;
     result.info = {
       checked: info,
       total: 0
@@ -118,7 +130,7 @@ class Site {
         var numWords = info.description.trim().split(/\s+/).length;
         if ( numWords ) {
           result.info.description = numWords + ' word' + ( numWords == 1 ? '' : 's');
-          result.info.total += (5 * numWords);
+          result.info.total += (1 * numWords);
         } else {
           result.info.description = 'none';
         }
@@ -134,7 +146,7 @@ class Site {
 
         if ( unique.length > 0 ) {
           result.info.doors = unique.length + ' unique door' + ( unique.length == 1 ? '' : 's');
-          result.info.total += (5 * unique.length);
+          result.info.total += (1 * unique.length);
         } else {
           result.info.doors = 'none';
         }
@@ -225,9 +237,9 @@ class Site {
       return Promise.resolve(result);
     })
     .catch(function(err) {
+      result.repository.get.failed = true;
       if ( !err.response ) {
         console.log(err);
-        result.repository.get.failed = true;
       } else {
         // No extra points, but include the error indicator for site issue
         result.repository.get.statusCode = err.response.statusCode;
@@ -300,9 +312,9 @@ class Site {
         return Promise.resolve(result);
       })
       .catch(function(err) {
+        result.endpoint.health.failed = true;
         if ( !err.response ) {
           console.log('Health check failed: ' + err);
-          result.endpoint.health.failed = true;
         } else {
           result.endpoint.health.statusCode = err.response.statusCode;
           result.endpoint.health.statusMessage = err.response.statusMessage;
@@ -360,12 +372,13 @@ class Site {
     var total = 0;
     var values = Object.values(finalScore);
     for(let i  = 0; i < values.length; i++ ) {
-      total += parseInt(values[i].total); // force number
+      if ( values[i] && values[i].total ) {
+        total += parseInt(values[i].total); // force number
+      }
     }
     finalScore.total = total;
 
     console.log("RACK THEM UP! ", total);
-
     return finalScore;
   }
 };

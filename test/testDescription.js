@@ -31,21 +31,40 @@ function verifyResult(result, total) {
 describe('checkDescription', function() {
 
   it('should not award points for empty info ""', function() {
-    return site.checkDescription('').then(function(result) {
+    return site.checkDescription('',{}).then(function(result) {
       verifyResult(result, 0); // no points
       (result.info.empty).should.be.true();
     });
   });
 
   it('should not award points for empty info {}', function() {
-    return site.checkDescription('{}').then(function(result) {
+    return site.checkDescription('{}',{}).then(function(result) {
       verifyResult(result, 0); // no points
       (result.info.empty).should.be.true();
     });
   });
 
+  it('should not award points for empty info {}', function() {
+    return site.checkDescription({},{}).then(function(result) {
+      verifyResult(result, 0); // no points
+      (result.info.empty).should.be.true();
+    });
+  });
+
+  it('Result should contain site information', function() {
+    return site.checkDescription({},{
+      owner: 'flippet',
+      position: 6
+    }).then(function(result) {
+      verifyResult(result, 0); // no points
+      (result.info.empty).should.be.true();
+      should.exist(result.site);
+    });
+  });
+
+
   it('should not award points for missing full name', function() {
-    return site.checkDescription(jsonBody.minimum()).then(function(result) {
+    return site.checkDescription(jsonBody.minimum(),{}).then(function(result) {
       verifyResult(result, 0); // no points
       (result.info.empty).should.be.false();
       (result.info.fullName).should.be.false();
@@ -55,7 +74,7 @@ describe('checkDescription', function() {
   });
 
   it('should award 5 pts for full name, 0 for missing description', function() {
-    return site.checkDescription(jsonBody.spareRoom()).then(function(result) {
+    return site.checkDescription(jsonBody.spareRoom(),{}).then(function(result) {
       verifyResult(result, 5); // full name (5), no description, no doors
       (result.info.empty).should.be.false();
       (result.info.fullName).should.be.true();
@@ -65,8 +84,8 @@ describe('checkDescription', function() {
   });
 
   it('should award 5 points for one-word description', function() {
-    return site.checkDescription(jsonBody.verboseRoom(1)).then(function(result) {
-      verifyResult(result, 10); // full name (5), one-word description (5)
+    return site.checkDescription(jsonBody.verboseRoom(1),{}).then(function(result) {
+      verifyResult(result, 6); // full name (5), one-word description (5)
       (result.info.empty).should.be.false();
       (result.info.fullName).should.be.true();
       should.equal(result.info.description, '1 word');
@@ -75,8 +94,8 @@ describe('checkDescription', function() {
   });
 
   it('should award 30 points for six-word description', function() {
-    return site.checkDescription(jsonBody.verboseRoom(6)).then(function(result) {
-      verifyResult(result, 35); // full name (5), 6 word description (30)
+    return site.checkDescription(jsonBody.verboseRoom(6),{}).then(function(result) {
+      verifyResult(result, 11); // full name (5), 6 word description (6)
       (result.info.empty).should.be.false();
       (result.info.fullName).should.be.true();
       should.equal(result.info.description, '6 words');
@@ -84,9 +103,9 @@ describe('checkDescription', function() {
     });
   });
 
-  it('should award 5 points for one unique door', function() {
-    return site.checkDescription(jsonBody.doorsAlone(1, false)).then(function(result) {
-      verifyResult(result, 10); // full name (5), no description, one door
+  it('should award 1 point for one unique door', function() {
+    return site.checkDescription(jsonBody.doorsAlone(1, false),{}).then(function(result) {
+      verifyResult(result, 6); // full name (5), no description, one door
       (result.info.empty).should.be.false();
       (result.info.fullName).should.be.true();
       should.equal(result.info.description, 'none');
@@ -94,9 +113,9 @@ describe('checkDescription', function() {
     });
   });
 
-  it('should award 5 points for multiple doors w/ same description', function() {
-    return site.checkDescription(jsonBody.doorsAlone(3, false)).then(function(result) {
-      verifyResult(result, 10); // full name (5), no description, one unique door
+  it('should award 1 point for multiple doors w/ same description', function() {
+    return site.checkDescription(jsonBody.doorsAlone(3, false),{}).then(function(result) {
+      verifyResult(result, 6); // full name (5), no description, one unique door
       (result.info.empty).should.be.false();
       (result.info.fullName).should.be.true();
       should.equal(result.info.description, 'none');
@@ -104,9 +123,9 @@ describe('checkDescription', function() {
     });
   });
 
-  it('should award 10 points for two doors w/ unique descriptions', function() {
-    return site.checkDescription(jsonBody.doorsAlone(2, true)).then(function(result) {
-      verifyResult(result, 15); // full name (5), no description, two unique doors (10)
+  it('should award 2 points for two doors w/ unique descriptions', function() {
+    return site.checkDescription(jsonBody.doorsAlone(2, true),{}).then(function(result) {
+      verifyResult(result, 7); // full name (5), no description, two unique doors (2)
       (result.info.empty).should.be.false();
       (result.info.fullName).should.be.true();
       should.equal(result.info.description, 'none');
@@ -114,9 +133,9 @@ describe('checkDescription', function() {
     });
   });
 
-  it('should award 25 points for 5 unique doors', function() {
-    return site.checkDescription(jsonBody.doorsAlone(5, true)).then(function(result) {
-      verifyResult(result, 30); // full name (5), no description, two unique doors (25)
+  it('should award 5 points for 5 unique doors', function() {
+    return site.checkDescription(jsonBody.doorsAlone(5, true),{}).then(function(result) {
+      verifyResult(result, 10); // full name (5), no description, five unique doors (5)
       (result.info.empty).should.be.false();
       (result.info.fullName).should.be.true();
       should.equal(result.info.description, 'none');
