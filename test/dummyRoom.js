@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corp.
+ * Copyright (c) 2017 IBM Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +13,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-var invokedParams = [];
-var asyncCalled =  false;
-var doneCalled = false;
-var doneParams = {};
-whisk = {
-    'invokeReturnData' : {},
-	'async' : function() {
-		console.log("Called async");
-		asyncCalled = true;
-	},
-	'invoke' : function(params) {
-		console.log("Invoke called with " + JSON.stringify(params));
-		invokedParams.push(params);
-		if (params.next) {
-			params.next(null, {'result': 'OK'});
-		}
-	},
-	'done' : function(params) {
-		doneCalled = true;
-		console.log("Done called with " + JSON.stringify(params));
-		doneParams = params;
-	}
-}
+const rp = require('request-promise');
+const WebSocket = require('ws');
