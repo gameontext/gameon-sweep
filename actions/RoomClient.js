@@ -267,6 +267,9 @@ function scoreRoom(status, result) {
     result.endpoint.total += status.items * 5;
   }
 
+  // Weight Room score double because rooms are awesome
+  result.endpoint.total *= 2;
+
   console.log('---> Room Score ', result.endpoint.total);
   return Promise.resolve(result);
 }
