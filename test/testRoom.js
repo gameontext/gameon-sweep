@@ -56,7 +56,7 @@ describe('checkRoom', function() {
 
     return site.checkEndpoint('',endpoint)
     .then(function(result) {
-      verifyResult(result, 5); // 5 points
+      verifyResult(result, 10); // 10 points
       should.exist(result.endpoint.target);
       (result.endpoint.target.valid).should.be.true();
     });
@@ -70,7 +70,7 @@ describe('checkRoom', function() {
 
     return site.checkEndpoint('658aa51512b7cbbc3ee5d0f502525545',endpoint)
     .then(function(result) {
-      verifyResult(result, 100); // 100 points
+      verifyResult(result, 1070); // 1070 points
       should.exist(result.endpoint.target);
       (result.endpoint.target.valid).should.be.true();
     });

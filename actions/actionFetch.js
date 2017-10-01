@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corp.
+ * Copyright (c) 2017 IBM Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -13,21 +13,21 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
-const Site = require('./Site.js');
+const MapClient = require('./MapClient.js');
 
 /**
- * Fetch information about a room (and backing site)
- * from the map.
+ * Fetch information about a room (and backing site) from the map.
  * Return promise that resolves to array of further actions based
  * on what is known about the room.
  */
 function main (params) {
-  var site_id = params.id || 'firstroom';
-  var url = params.url || 'https://gameontext.org/map/v1/sites/';
-  var interval = params.interval || 1000; // 1s
+  let site_id = params.id || 'firstroom';
+  let url = params.url || 'https://gameontext.org/map/v1/sites/';
+  let sweep_id = params.sweep_id || '';
+  let sweep_secret = params.sweep_secret || '';
 
-  var site = new Site(interval);
-  return site.fetchSite(url, site_id);
+  let mapClient = new MapClient(url, sweep_id, sweep_secret);
+  return mapClient.fetchSite(site_id);
 }
 
 module.exports.fetch = main;

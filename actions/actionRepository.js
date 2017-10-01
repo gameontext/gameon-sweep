@@ -21,11 +21,10 @@ const Site = require('./Site.js');
  * and the score
  */
 function main (params) {
-  var interval = params.interval || 1000; // 1s
+  let interval = params.interval || 1000; // 1s
 
-  var site = new Site(interval);
+  let site = new Site(interval);
   return site.checkRepository(params.repositoryUrl, params.owner);
 }
 
 module.exports.github = main;
-

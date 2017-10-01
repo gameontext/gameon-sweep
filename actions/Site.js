@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-const crypto = require('crypto');
 const rp = require('request-promise');
 const Promise = require("bluebird");
-const WebSocket = require('ws');
 const RoomClient = require('./RoomClient.js')
+const MapClient = require('./MapClient.js');
 
 class Site {
   /*
@@ -27,76 +26,47 @@ class Site {
     this.interval = interval;
   }
 
-  /*
-   * Fetch Room/Site information from the map service (using the
-   * request-promise object passed to ctor). Generate a list of
-   * actions for further tests.
-   */
-  fetchAllSites(url, sweepId, sweepSecret) {
-    var options = getRequestOptions(url, '', sweepId, sweepSecret);
-    // Fetch the site description from the Map
-    return rp(options)
-    .catch(function(err) {
-      console.log("Http Request error: " + err);
-      return Promise.reject({
-        statusCode: err.response.statusCode,
-        statusMessage: err.response.statusMessage
-      });
-    });
-  }
-
-  /*
-   * Fetch Room/Site information from the map service (using the
-   * request-promise object passed to ctor). Generate a list of
-   * actions for further tests.
-   */
-  fetchSite(url, id, sweepId, sweepSecret) {
-    var options = getRequestOptions(url, id, sweepId, sweepSecret);
-    var self = this;
-
-    // Fetch the site description from the Map
-    return rp(options)
-    .then(function (body) {
-      return self.bodyToActions(body);
-    });
-  }
-
-  bodyToActions(body) {
+  getActions(site_details) {
     var actions = [];
 
     // Additional information for checkDescription (site)
     var descParams = {};
-    if ( body.type === 'room' ) {
-      descParams.site = {};
-      descParams.site.owner = body.owner;
-      if ( body.coord ) {
-        descParams.site.path = Math.abs(body.coord.x) + Math.abs(body.coord.y);
-      }
+    descParams.site = {};
+    descParams.site.type = site_details.type;
+    if ( site_details.owner ) {
+      descParams.site.owner = site_details.owner;
+      descParams.site.assigned = site_details.assignedOn;
+    }
+    if ( site_details.coord ) {
+      descParams.site.path = Math.abs(site_details.coord.x) + Math.abs(site_details.coord.y);
     }
 
     // Construct appropriate sweep actions based on registration information
-    if ( body.info ) {
-      descParams.info = body.info;
-      actions.push({
-        actionName: 'sweep/checkDescription',
-        params: descParams
-      });
 
-      if ( body.info.repositoryUrl ) {
+    // All sites have descriptions checked
+    descParams.info = site_details.info || {};
+    actions.push({
+      actionName: 'sweep/checkDescription',
+      params: descParams
+    });
+
+    // If room info is present, we do additional checks
+    if ( site_details.info ) {
+      if ( site_details.info.repositoryUrl ) {
         actions.push({
           actionName: 'sweep/checkRepository',
           params: {
-            repositoryUrl: body.info.repositoryUrl,
-            owner: body.owner }
+            repositoryUrl: site_details.info.repositoryUrl,
+            owner: site_details.owner }
         });
       }
 
-      if ( body.info.connectionDetails ) {
+      if ( site_details.info.connectionDetails ) {
         actions.push({
           actionName: 'sweep/checkEndpoint',
           params: {
-            id: body._id,
-            connectionDetails: body.info.connectionDetails }
+            id: site_details._id,
+            connectionDetails: site_details.info.connectionDetails }
         });
       }
     }
@@ -104,10 +74,6 @@ class Site {
     return Promise.resolve(actions);
   }
 
-  /*
-   * Fetch Room/Site information from the map service (using the
-   * request-promise object passed to ctor)
-   */
   checkDescription(info, site) {
     var result = {};
     result.site = site;
@@ -116,52 +82,52 @@ class Site {
       total: 0
     };
 
-    // name is a required attribute, if it isn't there, the end.
-    result.info.empty = !(info && info.name && info.name.trim().length > 0);
-    if ( !result.info.empty ) {
-      // Check full name
-      result.info.fullName = !!info.fullName && info.fullName.trim().length > 0;
-      if ( result.info.fullName ) {
-        result.info.total += 5; // Full Name is not empty -- 5
-      }
+    if ( site.type === 'empty' ) {
+      result.info.total = -5;
+    } else {
+      // name is a required attribute, if it isn't there, the end.
+      result.info.empty = !(info && info.name && info.name.trim().length > 0);
+      if ( !result.info.empty ) {
+        // Check full name
+        result.info.fullName = !!info.fullName && info.fullName.trim().length > 0;
+        if ( result.info.fullName ) {
+          result.info.total += 5; // Full Name is not empty -- 5
+        }
 
-      // Check description. More points for more words.
-      if ( !!info.description ) {
-        var numWords = info.description.trim().split(/\s+/).length;
-        if ( numWords ) {
-          result.info.description = numWords + ' word' + ( numWords == 1 ? '' : 's');
-          result.info.total += (1 * numWords);
+        // Check description. More points for more words.
+        if ( !!info.description ) {
+          var numWords = info.description.trim().split(/\s+/).length;
+          if ( numWords ) {
+            result.info.description = numWords + ' word' + ( numWords == 1 ? '' : 's');
+            result.info.total += numWords;
+          } else {
+            result.info.description = 'none';
+          }
         } else {
           result.info.description = 'none';
         }
-      } else {
-        result.info.description = 'none';
-      }
 
-      // Check doors. More points for more (unique) doors
-      if ( !!info.doors && Object.values(info.doors).length > 0 ) {
-        var unique = Object.values(info.doors).filter(function(value, index, self) {
-          return self.indexOf(value) === index;
-        });
+        // Check doors. More points for more (unique) doors
+        if ( !!info.doors && Object.values(info.doors).length > 0 ) {
+          var unique = Object.values(info.doors).filter(function(value, index, self) {
+            return self.indexOf(value) === index;
+          });
 
-        if ( unique.length > 0 ) {
-          result.info.doors = unique.length + ' unique door' + ( unique.length == 1 ? '' : 's');
-          result.info.total += (1 * unique.length);
+          if ( unique.length > 0 ) {
+            result.info.doors = unique.length + ' unique door' + ( unique.length == 1 ? '' : 's');
+            result.info.total += unique.length;
+          } else {
+            result.info.doors = 'none';
+          }
         } else {
           result.info.doors = 'none';
         }
-      } else {
-        result.info.doors = 'none';
       }
     }
 
     return Promise.resolve(result);
   }
 
-  /*
-   * Fetch Room/Site information from the map service (using the
-   * request-promise object passed to ctor)
-   */
   checkRepository(url, owner) {
     var result = {};
     result.repository = {
@@ -418,28 +384,5 @@ function jsonStatus(result, body, match) {
   }
 }
 
-function getRequestOptions(url, id, sweepId, sweepSecret) {
-  var options = {
-    uri: url + id,
-    json: true,
-    headers: { 'User-Agent': 'Game On! Sweep' }
-  };
-
-  if (sweepId && sweepSecret) {
-    var now = new Date();
-    var timestamp = now.toISOString();
-
-    var allParams = sweepId + timestamp;
-    var hash = crypto.createHmac('sha256', sweepSecret)
-                     .update(allParams).digest('base64');
-
-    options.headers['Content-Type'] = 'application/json';
-    options.headers['gameon-id'] = sweepId;
-    options.headers['gameon-date'] = timestamp;
-    options.headers['gameon-signature'] = hash;
-  }
-
-  return options;
-}
 
 module.exports = Site;
