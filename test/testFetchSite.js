@@ -17,13 +17,14 @@ const should = require('should');
 const express = require('express');
 const rp = require('request-promise');
 const Site = require('../actions/Site.js');
+const MapClient = require('../actions/MapClient.js');
 const jsonBody = require('./commonJson.js');
 
 var app = express();
 var port = 3000;
 var server;
 
-let site = new Site(5);
+var site = new Site(5);
 
 function verifyDescriptionAction(action) {
   should.exist(action.actionName);
@@ -68,7 +69,9 @@ describe('checkSite', function() {
            .send('Not Available');
       });
 
-      return site.fetchSite('http://localhost:3000/fail/','firstroom')
+      let mapClient = new MapClient('http://localhost:3000/fail/', '', '');
+
+      return mapClient.fetchSite('firstroom')
       .should.be.rejectedWith({ statusCode: 503,
                                 statusMessage: 'Service Unavailable' });
     });
@@ -79,7 +82,9 @@ describe('checkSite', function() {
            .send('No results found');
       });
 
-      return site.fetchSite('http://localhost:3000/fail-not-exist/','firstroom')
+      let mapClient = new MapClient('http://localhost:3000/fail-not-exist/', '', '');
+
+      return mapClient.fetchSite('firstroom')
         .should.be.rejectedWith({ statusCode: 404,
                                   statusMessage: 'Not Found' });
     });
@@ -93,15 +98,19 @@ describe('checkSite', function() {
            .send(JSON.stringify(jsonBody.full()));
       });
 
-      return site.fetchSite('http://localhost:3000/ok-full/','firstroom')
-      .then(function (actions) {
-        should.equal(actions.length, 3, "should have 3 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
+      let mapClient = new MapClient('http://localhost:3000/ok-full/', '', '');
+      return mapClient.fetchSite('firstroom')
+      .then(function(site_details) {
+        return site.getActions(site_details)
+        .then(function (actions) {
+          should.equal(actions.length, 3, "should have 3 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
 
-        verifyDescriptionAction(actions[0]);
-        verifyGitHubAction(actions[1]);
-        verifyEndpointAction(actions[2]);
+          verifyDescriptionAction(actions[0]);
+          verifyGitHubAction(actions[1]);
+          verifyEndpointAction(actions[2]);
 
-        return true;
+          return true;
+        });
       });
     });
 
@@ -112,14 +121,18 @@ describe('checkSite', function() {
            .send(JSON.stringify(jsonBody.connection()));
       });
 
-      return site.fetchSite('http://localhost:3000/ok-connection/','firstroom')
-      .then(function (actions) {
-        should.equal(actions.length, 2, "should have 2 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
+      let mapClient = new MapClient('http://localhost:3000/ok-connection/', '', '');
+      return mapClient.fetchSite('firstroom')
+      .then(function(site_details) {
+        return site.getActions(site_details)
+        .then(function (actions) {
+          should.equal(actions.length, 2, "should have 2 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
 
-        verifyDescriptionAction(actions[0]);
-        verifyEndpointAction(actions[1]);
+          verifyDescriptionAction(actions[0]);
+          verifyEndpointAction(actions[1]);
 
-        return true;
+          return true;
+        });
       });
     });
 
@@ -130,14 +143,18 @@ describe('checkSite', function() {
            .send(JSON.stringify(jsonBody.github()));
       });
 
-      return site.fetchSite('http://localhost:3000/ok-github/','firstroom')
-      .then(function (actions) {
-        should.equal(actions.length, 2, "should have 2 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
+      let mapClient = new MapClient('http://localhost:3000/ok-github/','','');
+      return mapClient.fetchSite('firstroom')
+      .then(function(site_details) {
+        return site.getActions(site_details)
+        .then(function (actions) {
+          should.equal(actions.length, 2, "should have 2 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
 
-        verifyDescriptionAction(actions[0]);
-        verifyGitHubAction(actions[1]);
+          verifyDescriptionAction(actions[0]);
+          verifyGitHubAction(actions[1]);
 
-        return true;
+          return true;
+        });
       });
     });
 
@@ -148,16 +165,18 @@ describe('checkSite', function() {
            .send(JSON.stringify(jsonBody.slim()));
       });
 
-      return site.fetchSite('http://localhost:3000/ok-slim/','firstroom')
-      .then(function (actions) {
-        should.equal(actions.length, 1, "should have 1 action: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
+      let mapClient = new MapClient('http://localhost:3000/ok-slim/','','');
+      return mapClient.fetchSite('firstroom')
+      .then(function(site_details) {
+        return site.getActions(site_details)
+        .then(function (actions) {
+          should.equal(actions.length, 1, "should have 1 action: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
 
-        verifyDescriptionAction(actions[0]);
+          verifyDescriptionAction(actions[0]);
 
-        return true;
+          return true;
+        });
       });
     });
   });
 });
-
-

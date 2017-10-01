@@ -249,25 +249,25 @@ function scoreRoom(status, result) {
   // console.log('Tally results: ', status, result);
   result.endpoint.room = status;
 
-  // 5 points apiece for messages received
+  // 50 points apiece for messages received
   var apiece = ['ack', 'chat', 'close', 'exit', 'event', 'location', 'open'];
   for(var i = 0; i < apiece.length; i++ ) {
     if ( status[apiece[1]] ) {
-      result.endpoint.total += 5;
+      result.endpoint.total += 50;
     }
   }
 
   // 5 points _per command_
   if ( status.commands ) {
-    result.endpoint.total += status.commands * 5;
+    result.endpoint.total += status.commands * 15;
   }
 
   // 5 points _per item_
   if ( status.items ) {
-    result.endpoint.total += status.items * 5;
+    result.endpoint.total += status.items * 15;
   }
 
-  // Weight Room score double because rooms are awesome
+  // Weight Room score double because _LIVE_ rooms are awesome
   result.endpoint.total *= 2;
 
   console.log('---> Room Score ', result.endpoint.total);
