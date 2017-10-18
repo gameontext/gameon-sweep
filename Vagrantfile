@@ -51,7 +51,7 @@ Vagrant.configure("2") do |config|
     # automatically change directories on login
     echo 'cd /vagrant' | tee -a /home/vagrant/.profile
     echo '/vagrant/bin/wsk-setup.sh' | tee -a /home/vagrant/.profile
-    echo 'export PATH=~/.npm-global/bin:/vagrant/bin:$PATH' | tee -a /home/vagrant/.profile
+    echo 'export PATH=~/.npm-global/bin:/vagrant/bin:$PATH' | tee -a /home/vagrant/.bashrc
 
     cd /vagrant
   EOT
