@@ -32,8 +32,4 @@ else
     ${BIN}/wsk-login.sh
 fi
 
-echo "** Install global dependiences (babel)"
-${BIN}/recursive-dev.sh
-
-echo "** Build/install of nested whisk actions: recursive-npm.sh"
-${BIN}/recursive-npm.sh
+npm install

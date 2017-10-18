@@ -10,11 +10,15 @@ if [ -f ${ROOT}/.wskrc ]; then
 fi
 
 createApiKey() {
+  KEY_NAME=gameon-sweep
+  if [ -z "$LOGNAME" ]; then
+    KEY_NAME="${KEY_NAME}-${LOGNAME}"
+  fi
   echo "Checking Bluemix API Key $BLUEMIX_API_KEY"
   if [ -z "$BLUEMIX_API_KEY" ]; then
     echo
     echo "Creating an API key: bluemix iam api-key-create gameon-sweep"
-    response=$(bluemix iam api-key-create gameon-sweep)
+    response=$(bluemix iam api-key-create ${KEY_NAME})
     rc=$?
     if [ $rc -eq 0 ]; then
       export BLUEMIX_API_KEY=$(echo $response | sed -e 's/.*API Key //')
