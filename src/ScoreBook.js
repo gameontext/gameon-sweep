@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
+const assert = require('assert');
 const Promise = require('bluebird');
 
 class ScoreBook {
@@ -21,38 +22,39 @@ class ScoreBook {
    * Cloudant constructed elsewhere
    */
   constructor(cloudant, dbName) {
+    assert.ok(cloudant, 'Please provide Cloudant instance');
+    assert.ok(dbName, 'Cloudant DB must be specified');
     this.cloudant = cloudant;
     this.dbName = dbName;
   }
 
-  keepScore(site_id, score) {
-    if (!this.dbName) {
-      return Promise.reject('dbname is required.');
-    }
+  keepScore(score) {
     if (!score || typeof score !== 'object' ) {
       return Promise.reject('score object is required.');
     }
 
-    var cloudantDb = this.cloudant.use(this.dbName);
+    let site_id = score._id;
+    let cloudantDb = this.cloudant.use(this.dbName);
+
     score.recorded = new Date().toISOString();
-    score._id = site_id;
 
     // find a previous score for this document
     return getRevision(cloudantDb, site_id)
     .then(function(revision) {
       if ( revision ) {
-        console.log(`${site_id} score revision is ${revision}`);
+        // console.log(`${site_id} score revision is ${revision}`);
         score._rev = revision;
       } else {
-        console.log(`New score for ${site_id}`);
+        // console.log(`New score for ${site_id}`);
       }
 
       // Store the new result as a new revision
-      console.log(score)
-      return insert(cloudantDb, score);
+      // console.log(score)
+      return insert(cloudantDb, score)
+      .then(function() { return score; });
     })
     .catch(function(err) {
-      console.log("error for ", id, " is ", err);
+      // console.log("error for ", site_id, " is ", err);
       Promise.reject(err);
     });
   }
@@ -77,10 +79,10 @@ function insert(cloudantDb, score) {
   return new Promise(function(resolve, reject) {
     cloudantDb.insert(score, function(error, response) {
       if (!error) {
-        console.log("success", response);
+        // console.log("success", response);
         resolve(response);
       } else {
-        console.log("error", error);
+        // console.log("error", error);
         reject(error);
       }
     });
@@ -94,10 +96,10 @@ function get(cloudantDb, id) {
   return new Promise(function(resolve, reject) {
     cloudantDb.get(id, function(err, data) {
       if (!err) {
-        console.log("success retrieving score for ", id);
+        // console.log("success retrieving score for ", id);
         resolve(data);
       } else {
-        console.log("error", err);
+        // console.log("error", err);
         reject(err);
       }
     })
@@ -118,13 +120,13 @@ function getRevision(cloudantDb, id) {
       } else if (err.statusCode === 404) {
         resolve('');
       } else {
-        console.log("error retrieving revision for ", id, err);
+        // console.log("error retrieving revision for ", id, err);
         reject(err);
       }
     })
   })
   .catch(function(err) {
-    console.log("error working with cloudant for ", id, err);
+    // console.log("error working with cloudant for ", id, err);
     Promise.reject(err);
   });
 }
@@ -136,13 +138,13 @@ function get_view(cloudantDb, design, view, options) {
       if (!err) {
         resolve(data);
       } else {
-        console.log("error retrieving revision for ", id, err);
+        // console.log("error retrieving revision for ", id, err);
         reject(err);
       }
     })
   })
   .catch(function(err) {
-    console.log("error working with cloudant for ", id, err);
+    // console.log("error working with cloudant for ", id, err);
     Promise.reject(err);
   });
 }

@@ -13,66 +13,46 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
-const Site = require('./Site.js');
-const Cloudant = require('cloudant');
 const MapClient = require('./MapClient.js');
-const ScoreBook = require('./actions/ScoreBook.js');
+const openwhisk = require('openwhisk');
 
 /**
  * Fetch information about a room (and backing site) from the map.
  * Return promise that resolves to array of further actions based
  * on what is known about the room.
  */
-function main (params) {
+function scoreAll(params) {
   let url = params.url || 'https://gameontext.org/map/v1/sites/';
-  let interval = params.interval || 1000; // 1s
   let sweep_id = params.sweep_id || '';
   let sweep_secret = params.sweep_secret || '';
-  let cloudant_url = params.cloudant_url || process.env.CLOUDANT_URL;
-  let cloudant = Cloudant({url: cloudant_url});
+  let ow = openwhisk();
 
-  let site = new Site(interval);
-  let scorebook = new ScoreBook(cloudant, 'sweep_score');
-  let mapClient = new MapClient(url, sweepId, sweepSecret);
+  let mapClient = new MapClient(url, sweep_id, sweep_secret);
 
-  return mapClient.fetchAllSites(url, sweep_id, sweep_secret)
-  .then(function(all_sites) {
-    console.log(all_sites.length + ' sites to score... ');
+  params.marker = Date.now();
+  return new Promise(function(resolve, reject) {
+    let action_list = [];
+    mapClient.fetchSites()
+    .then(function(all_sites) {
+      // kick off a new asynchronous action for each site
+      for(let i = 0; i < all_sites.length; i++ ) {
+        let px = JSON.parse(JSON.stringify(params)); // copy / prevent mutation
+        px.site = all_sites[i];
 
-    var all_actions = [];
+        action_list.push(ow.actions.invoke({
+          actionName: 'sweep/actionEvaluate',
+          params: px
+        }));
+      }
 
-    // for each site in the list, we need to figure out the corresponding
-    // action(s) required to generate its score
-    for(let i = 0; i < all_sites.length; i++ ) {
-
-      // Add an action to check site details.
-      all_actions.push(function() {
-        // Retrive site definition
-        return mapClient.fetchSite(site_id)
-        .then(function(site_details) {
-          // Find the list of actions required to create a site's score
-          // based on the information present in the site definition
-          return site.getActions(site_details)
-          .then(function (actionList) {
-
-            var site_actions = actionList.map(function (item) {
-              return ow.actions.invoke(item);
-            });
-
-            // Wait for all actions defined to check a given site to finish
-            return Promise.all(site_actions).then(function (results) {
-              var finalScore = site.totalScore(results);
-              finalScore.marker = marker;
-              return scorebook.keepScore(site_id, finalScore);
-            });
-          });
-        });
+      return Promise.all(action_list).then(function (results) {
+        return resolve({actions: action_list.length});
       });
-
-      // now wait for all the checks across ALL the sites to finish (kind of ew)
-      return Promise.all(all_actions);
-    }
+    })
+    .catch(function(err) {
+      return reject({error: err});
+    });
   });
 }
 
-module.exports.fetch = main;
+exports.main = scoreAll;

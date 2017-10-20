@@ -1,10 +1,11 @@
-.wskrc
-.env
-.vscode
 .DS_Store
+.env
+.nyc_output
 .vagrant
-docker-compose.override.yml
+.vscode
+.wskrc
+build
+coverage
 dist
-node_modules
 docker-compose.override.yml
-/build
+node_modules

@@ -15,23 +15,47 @@
  *******************************************************************************/
 const should = require('should');
 const Promise = require("bluebird");
-const Site = require('../actions/Site.js');
+const SiteEvaluator = require('../src/SiteEvaluator.js');
 const jsonBody = require('./commonJson.js');
 
-let site = new Site(5);
-
+function verifyScore(result, total) {
+  // console.log(JSON.stringify(result.score));
+  should.exist(result.total);
+  should.equal(result.total, total, 'Should have the expected number of points');
+}
 
 describe('totalScore', function() {
+  let params = {};
+  params.site = {};
 
-  it('should create final result containing all elements', function() {
-    var finalScore = site.totalScore([
-      {info: {total: 0}, site: {}},
-      {endpoint: {total: 6}},
-      {room: {total: 6}}
-    ]);
+  it('should return 0 for empty result', function() {
+    let evaluator = new SiteEvaluator(params);
+    let finalScore = evaluator.totalScore();
+    verifyScore(finalScore, 0);
+  });
 
-    console.log(finalScore);
+  it('should sum results from multiple sections', function() {
+    params.score = {
+      info: { total: 1 },
+      info1: { total: 1 },
+      info2: { total: 1 },
+      info3: { total: 1 }
+    }
+    let evaluator = new SiteEvaluator(params);
+    let finalScore = evaluator.totalScore();
+    verifyScore(finalScore, 4);
+  });
 
+  it('should skip sections without totals', function() {
+    params.score = {
+      info: { total: 1 },
+      info1: { },
+      info2: { total: 1 },
+      info3: { total: 1 }
+    }
+    let evaluator = new SiteEvaluator(params);
+    let finalScore = evaluator.totalScore();
+    verifyScore(finalScore, 3);
   });
 
 });

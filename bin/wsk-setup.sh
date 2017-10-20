@@ -32,4 +32,23 @@ else
     ${BIN}/wsk-login.sh
 fi
 
+echo "Testing whisk action:
+bx wsk action invoke /whisk.system/utils/echo -p message hello --blocking --result
+
+Response: "
+bx wsk action invoke /whisk.system/utils/echo -p message hello --blocking --result
+rc=$?
+if [ $rc -eq 0 ]; then
+  echo "All is well!"
+  exit 0
+else
+  echo "Test invocation failed with return code $rc"
+fi
+
+HAS_NYC=$(which nyc)
+if [ -z "$HAS_NYC"]; then
+  echo "Installing istanbul command line: npm install -g nyc"
+  npm install -g nyc
+fi
+
 npm install

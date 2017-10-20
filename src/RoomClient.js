@@ -23,8 +23,10 @@ class RoomClient {
     this.id = id;
     this.target = target;
     this.status = {};
+    this.sent = [];
+    this.received = [];
 
-    var self = this;
+    let self = this;
 
     // Set up promises so we can count if stuff happened
     this.open_p = new Promise((resolve, reject) => {
@@ -71,29 +73,34 @@ class RoomClient {
   }
 
   tryRoom(result) {
-    console.log('tryRoom: ', this.id, this.target, this.token);
-    var self = this;
-    var status = this.status;
-    var client = null;
+    // console.log('tryRoom: ', this.id, this.target, this.token);
+    result.progress = 'room';
+
+    let client = null;
+    let self = this;
+    let status = this.status;
+    status.received = this.received;
+    status.sent = this.sent;
 
     return Promise.try(function() {
       client = makeClient(self.target, self);
 
       // this attempt finishes when connection is open, or it times out
-      return self.open_p.timeout(10000) // 10 seconds to connect;
+      return self.open_p.timeout(5000) // 5 seconds to connect;
     })
     .then(function() {
       if ( client.readyState === 1 ) {
         // WebSocket is open! we shall go now to break, err.. check stuff
 
         self.ack_p.then(function() {
-          var version = Math.max(self.status.ack);
-          client.send(`roomHello,${self.id},{
-            "username": "Jane Said",
-            "userId": "sweepJane",
-            "version": ${version}
-          }`, {}, function() {
-            self.status.sent = true;
+          let version = Math.max.apply(Math, self.status.ack);
+          let msg = makeMessage('roomHello', self.id, {
+            username: "Jane Said",
+            userId: "sweepJane",
+            version: version
+          });
+          client.send(msg, {}, function() {
+            self.sent.push(msg);
           });
         });
 
@@ -101,23 +108,25 @@ class RoomClient {
         .delay(1000) // wait a second
         .then(function() {
           processLocation(client, status, self.id);
-          client.send(`room,${self.id},{
-            "username": "Jane Said",
-            "userId": "sweepJane",
-            "content": "/go N"
-          }`, {}, function() {
-            self.status.sent = true;
+          let msg = makeMessage('room', self.id, {
+            username: "Jane Said",
+            userId: "sweepJane",
+            content: "/go N"
+          });
+          client.send(msg, {}, function() {
+            self.sent.push(msg);
           });
         });
 
         self.exit_p
         .delay(1000)
         .then(function() {
-          client.send(`roomGoodbye,${self.id},{
-            "username": "Jane Said",
-            "userId": "sweepJane"
-          }`, {}, function() {
-            self.status.sent = true;
+          let msg = makeMessage('roomGoodbye', self.id, {
+            username: "Jane Said",
+            userId: "sweepJane",
+          });
+          client.send(msg, {}, function() {
+            self.sent.push(msg);
           });
         });
 
@@ -127,7 +136,7 @@ class RoomClient {
 
       // Wait for all the dust to settle..
       return Promise.all([self.open_p, self.ack_p, self.location_p, self.chat_p, self.event_p, self.exit_p])
-      .timeout(15000)
+      .timeout(10000)
       .then(function() {
         status.timeout = false;
         client.close(1000,'All done!');
@@ -156,6 +165,10 @@ class RoomClient {
   }
 };
 
+function makeMessage(prefix, id, content) {
+  return prefix +',' + id + ',' + JSON.stringify(content);
+}
+
 function makeClient(target, promises) {
   client = new WebSocket(target);
 
@@ -180,9 +193,10 @@ function makeClient(target, promises) {
   });
 
   client.on('message', function(data) {
+    promises.received.push(data);
     // console.log(data);
-    var pos = data.indexOf('{');
-    var payload = JSON.parse(data.substring(pos));
+    let pos = data.indexOf('{');
+    let payload = JSON.parse(data.substring(pos));
 
     if ( data.startsWith('ack,') ) {
       promises.ack_r(payload);
@@ -205,26 +219,32 @@ function closeAll(code, reason) {
 }
 
 function processLocation(client, status, id) {
-  var payload = status.location;
+  let payload = status.location;
 
   // Look for optional room content..
   if ( !!payload.commands ) {
-    var keys = Object.keys(payload.commands);
-    var numCommands = keys.length;
+    let keys = Object.keys(payload.commands);
+    let numCommands = keys.length;
     status.commands = numCommands;
 
-    var str = (numCommands == 1 ? '1 custom command' : numCommands + ' custom commands');
-    client.send(`room,${id},{
+    let str = (numCommands == 1 ? '1 custom command' : numCommands + ' custom commands');
+    let yay1 = makeMessage('room',id,{
       "username": "Jane Said",
       "userId": "sweepJane",
-      "content": "Well done! You have ${str}. Love that!"
-    }`);
+      "content": `Well done! You have ${str}. Love that!`
+    });
+    client.send(yay1, {}, function() {
+      status.sent.push(yay1);
+    });
 
-    client.send(`room,${id},{
+    let cmd1 = makeMessage('room',id,{
       "username": "Jane Said",
       "userId": "sweepJane",
-      "content": "${keys[0]}"
-    }`);
+      "content": keys[0]
+    });
+    client.send(cmd1, {}, function() {
+      status.sent.push(cmd1);
+    });
   }
 
   if ( !!payload.objects ) {
@@ -233,44 +253,50 @@ function processLocation(client, status, id) {
   }
 
   if ( !!payload.roomInventory ) {
-    var numItems = payload.roomInventory.length;
+    let numItems = payload.roomInventory.length;
     status.items = numItems;
 
-    var str = (numItems == 1 ? '1 items' : numItems + ' items');
-    client.send(`room,${id},{
+    let str = (numItems == 1 ? '1 items' : numItems + ' items');
+    let yay2 = makeMessage('room',id,{
       "username": "Jane Said",
       "userId": "sweepJane",
-      "content": "Dig it! You have ${str} to mess with in this room. So fun!"
-    }`);
+      "content": `Dig it! You have ${str} to mess with in this room. So fun!`
+    });
+    client.send(yay2, {}, function() {
+      status.sent.push(yay2);
+    });
   }
 }
 
 function scoreRoom(status, result) {
+  let score = result.score.endpoint;
   // console.log('Tally results: ', status, result);
-  result.endpoint.room = status;
+  score.room = status;
+  score.room.sent = score.room.sent;
+  score.room.received = score.room.received;
 
   // 50 points apiece for messages received
-  var apiece = ['ack', 'chat', 'close', 'exit', 'event', 'location', 'open'];
-  for(var i = 0; i < apiece.length; i++ ) {
+  let apiece = ['ack', 'chat', 'close', 'exit', 'event', 'location', 'open'];
+  for(let i = 0; i < apiece.length; i++ ) {
     if ( status[apiece[1]] ) {
-      result.endpoint.total += 50;
+      score.total += 50;
     }
   }
 
   // 5 points _per command_
   if ( status.commands ) {
-    result.endpoint.total += status.commands * 15;
+    score.total += status.commands * 15;
   }
 
   // 5 points _per item_
   if ( status.items ) {
-    result.endpoint.total += status.items * 15;
+    score.total += status.items * 15;
   }
 
   // Weight Room score double because _LIVE_ rooms are awesome
-  result.endpoint.total *= 2;
+  score.total *= 2;
 
-  console.log('---> Room Score ', result.endpoint.total);
+  // console.log('---> Room Score ', score.total);
   return Promise.resolve(result);
 }
 

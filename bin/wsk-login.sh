@@ -10,14 +10,11 @@ if [ -f ${ROOT}/.wskrc ]; then
 fi
 
 createApiKey() {
-  KEY_NAME=gameon-sweep
-  if [ -z "$LOGNAME" ]; then
-    KEY_NAME="${KEY_NAME}-${LOGNAME}"
-  fi
   echo "Checking Bluemix API Key $BLUEMIX_API_KEY"
   if [ -z "$BLUEMIX_API_KEY" ]; then
+    KEY_NAME="${KEY_NAME}-$(hostname)-${LOGNAME}"
     echo
-    echo "Creating an API key: bluemix iam api-key-create gameon-sweep"
+    echo "Creating an API key: bluemix iam api-key-create ${KEY_NAME}"
     response=$(bluemix iam api-key-create ${KEY_NAME})
     rc=$?
     if [ $rc -eq 0 ]; then
@@ -78,18 +75,5 @@ login() {
 if login
 then
   createApiKey
-
-  echo "Testing whisk action:
-  bx wsk action invoke /whisk.system/utils/echo -p message hello --blocking --result
-
-Response: "
-  bx wsk action invoke /whisk.system/utils/echo -p message hello --blocking --result
-  rc=$?
-  if [ $rc -eq 0 ]; then
-    echo "All is well!"
-    exit 0
-  else
-    echo "Test invocation failed with return code $rc"
-  fi
 fi
 exit 1

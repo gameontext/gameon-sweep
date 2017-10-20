@@ -26,7 +26,8 @@ Vagrant.configure("2") do |config|
       git \
       curl \
       jq \
-      nodejs
+      nodejs  \
+      zip
 
     if /usr/local/bin/bx > /dev/null 2>/dev/null
     then
@@ -36,6 +37,9 @@ Vagrant.configure("2") do |config|
       echo 'Installing Bluemix CLI'
       sh <(curl -fssSL https://clis.ng.bluemix.net/install/linux 2>/dev/null)
     fi
+
+    # Global install of istanbul command line
+    npm install -g nyc
   EOT
 
   # Run as vagrant user (not yet in docker group): bx plugins, profile script
