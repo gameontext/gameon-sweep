@@ -60,6 +60,9 @@ for x in $actions; do
     actionScoreAll)
       wsk_args='-t 300000'
     ;;
+    actionSwap)
+      wsk_args="-p cloudant_url ${CLOUDANT_URL} -t 300000"
+    ;;
     *)
       wsk_args=
     ;;
