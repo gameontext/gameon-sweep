@@ -17,62 +17,58 @@ const should = require('should');
 const Promise = require("bluebird");
 const express = require('express');
 const rp = require('request-promise');
-const Site = require('../actions/Site.js');
+const SiteEvaluator = require('../src/SiteEvaluator.js');
 const dummy = require('./dummyRoom.js');
 const jsonBody = require('./commonJson.js');
 
-let site = new Site(5);
-
 function verifyResult(result, total) {
-  //console.log(result);
-  should.exist(result.endpoint);
-  should.exist(result.endpoint.total);
-  should.equal(result.endpoint.total, total, 'Should have the expected number of points');
+  // console.log(JSON.stringify(result.score));
+  should.exist(result.site);
+  should.exist(result.score.endpoint);
+  should.exist(result.score.endpoint.total);
+  should.equal(result.score.endpoint.total, total, 'Should have the expected number of points');
 }
 
 describe('checkRoom', function() {
-
-  afterEach(function() {
-    console.log('----------');
-  });
+  let params = {};
+  params.score = {};
+  params.interval = 5;
 
   it('should not award points when the target is bad', function() {
-    var endpoint = jsonBody.noTarget();
-    endpoint.target = 'http://gameontext.org';
+    params.site = jsonBody.target_url('http://gameontext.org');
 
-    return site.checkEndpoint('',endpoint)
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkEndpoint()
     .then(function(result) {
       verifyResult(result, 0); // no points
-      should.exist(result.endpoint.target);
-      (result.endpoint.target.valid).should.be.false();
+      should.exist(result.score.endpoint.target);
+      (result.score.endpoint.target.valid).should.be.false();
     });
   });
 
   it('should award points for a valid websocket URL', function() {
     this.timeout(5000);
+    params.site = jsonBody.target_url('ws://localhost:14000/');
 
-    var endpoint = jsonBody.noTarget();
-    endpoint.target = 'ws://localhost:14000/';
-
-    return site.checkEndpoint('',endpoint)
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkEndpoint()
     .then(function(result) {
       verifyResult(result, 10); // 10 points
-      should.exist(result.endpoint.target);
-      (result.endpoint.target.valid).should.be.true();
+      should.exist(result.score.endpoint.target);
+      (result.score.endpoint.target.valid).should.be.true();
     });
   });
 
   it('should go for broke with RecRoom', function() {
     this.timeout(30000);
+    params.site = jsonBody.target_url('wss://gameontext.org/rooms/ws/RecRoom');
 
-    var endpoint = jsonBody.noTarget();
-    endpoint.target = 'wss://gameontext.org/rooms/ws/RecRoom';
-
-    return site.checkEndpoint('658aa51512b7cbbc3ee5d0f502525545',endpoint)
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkEndpoint()
     .then(function(result) {
       verifyResult(result, 1070); // 1070 points
-      should.exist(result.endpoint.target);
-      (result.endpoint.target.valid).should.be.true();
+      should.exist(result.score.endpoint.target);
+      (result.score.endpoint.target.valid).should.be.true();
     });
   });
 });

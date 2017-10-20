@@ -16,39 +16,18 @@
 const should = require('should');
 const express = require('express');
 const rp = require('request-promise');
-const Site = require('../actions/Site.js');
-const MapClient = require('../actions/MapClient.js');
+const MapClient = require('../src/MapClient.js');
 const jsonBody = require('./commonJson.js');
 
 var app = express();
 var port = 3000;
 var server;
 
-var site = new Site(5);
-
-function verifyDescriptionAction(action) {
-  should.exist(action.actionName);
-  should.equal(action.actionName, 'sweep/checkDescription');
-  should.exist(action.params, 'There should be parameters');
-  should.exist(action.params.info, 'Room info should be in parameters');
-  should.exist(action.params.info.name, 'Required room name should exist');
-}
-
-function verifyGitHubAction(action) {
-  should.exist(action.actionName);
-  should.equal(action.actionName, 'sweep/checkRepository');
-  should.exist(action.params, 'There should be parameters');
-  should.exist(action.params.repositoryUrl, 'Repository URL should be in parameters');
-}
-
-function verifyEndpointAction(action) {
-  should.exist(action.actionName);
-  should.equal(action.actionName, 'sweep/checkEndpoint');
-  should.exist(action.params, 'There should be parameters');
-  should.exist(action.params.connectionDetails, 'Connection details should be in parameters');
-}
-
 describe('checkSite', function() {
+  let params = {};
+  params.score = {}
+  params.interval = 1;
+
   // Scope server start/stop to within this block
   before(function(){
     server = app.listen(port, function() {
@@ -61,122 +40,30 @@ describe('checkSite', function() {
     server.close();
   });
 
-  describe('should handle error responses', function() {
-
-    it('should return an error when fetch fails', function() {
-      app.get('/fail/firstroom', function (req, res) {
-        res.status(503)        // HTTP status 503: Not Available
-           .send('Not Available');
-      });
-
-      let mapClient = new MapClient('http://localhost:3000/fail/', '', '');
-
-      return mapClient.fetchSite('firstroom')
-      .should.be.rejectedWith({ statusCode: 503,
-                                statusMessage: 'Service Unavailable' });
+  it('should return an error when fetch fails', function() {
+    app.get('/fail/firstroom', function (req, res) {
+      res.status(503)        // HTTP status 503: Not Available
+         .send('Not Available');
     });
 
-    it('should return an error when the site does not exist', function() {
-      app.get('/fail-not-exist/firstroom', function (req, res) {
-        res.status(404)        // HTTP status 404: No results found
-           .send('No results found');
-      });
+    let mapClient = new MapClient('http://localhost:3000/fail/', '', '');
 
-      let mapClient = new MapClient('http://localhost:3000/fail-not-exist/', '', '');
-
-      return mapClient.fetchSite('firstroom')
-        .should.be.rejectedWith({ statusCode: 404,
-                                  statusMessage: 'Not Found' });
-    });
+    return mapClient.fetchSite({ '_id': 'firstroom' })
+    .should.be.rejectedWith({ statusCode: 503,
+                              statusMessage: 'Service Unavailable' });
   });
 
-  describe('should return list of actions', function() {
-    it('should include github and connection detail actions', function() {
-      app.get('/ok-full/firstroom', function (req, res) {
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200)        // HTTP status 200: OK
-           .send(JSON.stringify(jsonBody.full()));
-      });
-
-      let mapClient = new MapClient('http://localhost:3000/ok-full/', '', '');
-      return mapClient.fetchSite('firstroom')
-      .then(function(site_details) {
-        return site.getActions(site_details)
-        .then(function (actions) {
-          should.equal(actions.length, 3, "should have 3 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
-
-          verifyDescriptionAction(actions[0]);
-          verifyGitHubAction(actions[1]);
-          verifyEndpointAction(actions[2]);
-
-          return true;
-        });
-      });
+  it('should return an error when the site does not exist', function() {
+    app.get('/fail-not-exist/firstroom', function (req, res) {
+      res.status(404)        // HTTP status 404: No results found
+         .send('No results found');
     });
 
-    it('should include connection detail action', function() {
-      app.get('/ok-connection/firstroom', function (req, res) {
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200)        // HTTP status 200: OK
-           .send(JSON.stringify(jsonBody.connection()));
-      });
+    let mapClient = new MapClient('http://localhost:3000/fail-not-exist/', '', '');
 
-      let mapClient = new MapClient('http://localhost:3000/ok-connection/', '', '');
-      return mapClient.fetchSite('firstroom')
-      .then(function(site_details) {
-        return site.getActions(site_details)
-        .then(function (actions) {
-          should.equal(actions.length, 2, "should have 2 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
-
-          verifyDescriptionAction(actions[0]);
-          verifyEndpointAction(actions[1]);
-
-          return true;
-        });
-      });
-    });
-
-    it('should include github action', function() {
-      app.get('/ok-github/firstroom', function (req, res) {
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200)        // HTTP status 200: OK
-           .send(JSON.stringify(jsonBody.github()));
-      });
-
-      let mapClient = new MapClient('http://localhost:3000/ok-github/','','');
-      return mapClient.fetchSite('firstroom')
-      .then(function(site_details) {
-        return site.getActions(site_details)
-        .then(function (actions) {
-          should.equal(actions.length, 2, "should have 2 actions: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
-
-          verifyDescriptionAction(actions[0]);
-          verifyGitHubAction(actions[1]);
-
-          return true;
-        });
-      });
-    });
-
-    it('should not include additional checks', function() {
-      app.get('/ok-slim/firstroom', function (req, res) {
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200)        // HTTP status 200: OK
-           .send(JSON.stringify(jsonBody.slim()));
-      });
-
-      let mapClient = new MapClient('http://localhost:3000/ok-slim/','','');
-      return mapClient.fetchSite('firstroom')
-      .then(function(site_details) {
-        return site.getActions(site_details)
-        .then(function (actions) {
-          should.equal(actions.length, 1, "should have 1 action: " + actions.length + "\n " + JSON.stringify(actions, null, 2));
-
-          verifyDescriptionAction(actions[0]);
-
-          return true;
-        });
-      });
-    });
+    return mapClient.fetchSite({ '_id': 'firstroom' })
+      .should.be.rejectedWith({ statusCode: 404,
+                                statusMessage: 'Not Found' });
   });
+
 });

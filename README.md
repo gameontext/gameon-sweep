@@ -57,8 +57,8 @@ You can also execute both actions locally by running:
 To get these into whisk you need to setup your whisk CLI as described in the [Bluemix documentation](https://new-console.ng.bluemix.net/openwhisk/cli).  In addition you need to set the namespace to the one that Whisk will use by default (for me this was iain.duncan@uk.ibm.com) or use the Microservices_dev namespace to be shared within the whole org (although only you will be able to see the activations).  Do this with the following and then [create the actions](https://new-console.ng.bluemix.net/docs/openwhisk/openwhisk_actions.html#openwhisk_create_action_js):
 
     wsk property set --namespace <your_namespace OR Microservices_dev>
-    wsk action create loadSites src/actions/loadSites/dist/bundle.js --param sweepId </npc/sweep/id from etcd> --param sweepApiKey </npc/sweep/password from etcd> --param namespace <your_namespace OR Microservices_dev>
-    wsk action create checkSite src/actions/checkSite/dist/bundle.js
+    wsk action create loadSites src/src/loadSites/dist/bundle.js --param sweepId </npc/sweep/id from etcd> --param sweepApiKey </npc/sweep/password from etcd> --param namespace <your_namespace OR Microservices_dev>
+    wsk action create checkSite src/src/checkSite/dist/bundle.js
 
 You can then manually trigger the chain with the following:
 

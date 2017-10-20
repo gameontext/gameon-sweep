@@ -95,9 +95,12 @@ function makeDoors(number, unique) {
   return doors;
 }
 
-function makeDescription(number) {
+function makeDescription(number, unique) {
   var description = '';
   for (var i = 0; i < number; i++) {
+    if ( unique ) {
+      description += i;
+    }
     description += 'word '
   }
   return description;
@@ -109,73 +112,100 @@ module.exports.slim = function () {
 
 // Repository URL
 module.exports.github = function () {
-  let github = module.exports.slim();
-  github.info.repositoryUrl = "https://github.com/your-fork";
+  let site = module.exports.slim();
+  site.info.repositoryUrl = "https://github.com/your-fork";
 
-  return github;
+  return site;
+};
+
+// Repository URL
+module.exports.site_repo = function (url) {
+  let site = module.exports.slim();
+  site.owner = '';
+  site.info.repositoryUrl = url;
+
+  return site;
 };
 
 // Connection details
 module.exports.connection = function () {
-  let connection = module.exports.slim();
-  connection.info.connectionDetails = {
+  let site = module.exports.slim();
+  site.owner = '';
+  site.info.connectionDetails = {
     type: "websocket"
   };
 
-  return connection;
+  return site;
 };
 
 // Connection details and health endpoint
-module.exports.health = function () {
-  let health = module.exports.connection();
-  health.info.connectionDetails.healthUrl = "http://secondroom:9008/barn/health";
+module.exports.health_url = function (url) {
+  let site = module.exports.connection();
+  site.info.connectionDetails.healthUrl = url;
 
-  return health;
+  return site;
+};
+
+// Connection details and health endpoint
+module.exports.target_url = function (url) {
+  let site = module.exports.connection();
+  site.info.connectionDetails.target = url;
+
+  return site;
 };
 
 // All the things!
 module.exports.full = function () {
-  let full = module.exports.health();
-  full.info.repositoryUrl = "https://github.com/your-fork";
+  let site = module.exports.health_url("http://secondroom:9008/barn/health");
+  site.info.repositoryUrl = "https://github.com/your-fork";
 
-  return full;
+  return site;
 };
 
-// RoomInfo
-module.exports.minimum = function() {
-  return { name: 'name' };
-};
+module.exports.site_empty = function() {
+  return {
+    type: 'empty'
+  };
+}
 
-// RoomInfo
+module.exports.site_wrong = function() {
+  return {
+    type: 'room',
+    info: { other: 'bad'}
+  };
+}
+
+module.exports.site_min = function() {
+  return {
+    type: 'room',
+    info: { name: 'name' }
+  };
+}
+
 module.exports.spareRoom = function() {
   return {
-    name: "First Room",
-    fullName: "The First Room",
+    type: 'room',
+    info: {
+      name: "First Room",
+      fullName: "The First Room",
+    }
   };
 };
 
-// RoomInfo
-module.exports.verboseRoom = function(number) {
+module.exports.verboseRoom = function(number, unique) {
   let described = module.exports.spareRoom();
-  described.description = makeDescription(number);
+  described.info.description = makeDescription(number, unique);
   return described;
 };
 
-// RoomInfo
 module.exports.doorsAlone = function(number, unique) {
   let doorsAlone = module.exports.spareRoom();
-  doorsAlone.doors = makeDoors(number, unique);
+  doorsAlone.info.doors = makeDoors(number, unique);
   return doorsAlone;
 };
 
-// RoomInfo
 module.exports.verboseDoors = function(number, unique) {
   let described = module.exports.verboseRoom(1);
-  described.doors = makeDoors(number, unique);
+  described.info.doors = makeDoors(number, unique);
   return described;
 };
-
-module.exports.noTarget = function() {
-  return { type: 'websocket' };
-};
-

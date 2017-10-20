@@ -15,131 +15,166 @@
  *******************************************************************************/
 const should = require('should');
 const Promise = require("bluebird");
-const Site = require('../actions/Site.js');
+const SiteEvaluator = require('../src/SiteEvaluator.js');
 const jsonBody = require('./commonJson.js');
 
 var rp = require('request-promise');
-let site = new Site(5);
 
 function verifyResult(result, total) {
-  //console.log(result);
-  should.exist(result.info);
-  should.exist(result.info.total);
-  should.equal(result.info.total, total, 'Should have the expected number of points');
+  // console.log(JSON.stringify(result.score));
+  should.exist(result.site);
+  should.exist(result.score.info);
+  should.exist(result.score.info.total);
+  should.equal(result.score.info.total, total, 'Should have the expected number of points');
 }
 
 describe('checkDescription', function() {
+  let params = {};
+  params.score = {}
+  params.interval = 1;
 
-  it('should not award points for empty info ""', function() {
-    return site.checkDescription('',{}).then(function(result) {
-      verifyResult(result, 0); // no points
-      (result.info.empty).should.be.true();
+  it('should have -5 points for empty room', function() {
+    params.site = jsonBody.site_empty();
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
+      verifyResult(result, -5);
     });
   });
 
-  it('should not award points for empty info {}', function() {
-    return site.checkDescription('{}',{}).then(function(result) {
+  it('should not award points for sparse room definition', function() {
+    params.site = jsonBody.site_wrong();
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.info.empty).should.be.true();
+      (result.score.info.nameDefined).should.be.false();
     });
   });
-
-  it('should not award points for empty info {}', function() {
-    return site.checkDescription({},{}).then(function(result) {
-      verifyResult(result, 0); // no points
-      (result.info.empty).should.be.true();
-    });
-  });
-
-  it('Result should contain site information', function() {
-    return site.checkDescription({},{
-      owner: 'flippet',
-      position: 6
-    }).then(function(result) {
-      verifyResult(result, 0); // no points
-      (result.info.empty).should.be.true();
-      should.exist(result.site);
-    });
-  });
-
 
   it('should not award points for missing full name', function() {
-    return site.checkDescription(jsonBody.minimum(),{}).then(function(result) {
+    params.site = jsonBody.site_min();
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.info.empty).should.be.false();
-      (result.info.fullName).should.be.false();
-      should.equal(result.info.description, 'none');
-      should.equal(result.info.doors, 'none');
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.false();
+      should.equal(result.score.info.description, 'none');
+      should.equal(result.score.info.doors, 'none');
     });
   });
 
   it('should award 5 pts for full name, 0 for missing description', function() {
-    return site.checkDescription(jsonBody.spareRoom(),{}).then(function(result) {
+    params.site = jsonBody.spareRoom();
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 5); // full name (5), no description, no doors
-      (result.info.empty).should.be.false();
-      (result.info.fullName).should.be.true();
-      should.equal(result.info.description, 'none');
-      should.equal(result.info.doors, 'none');
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.true();
+      should.equal(result.score.info.description, 'none');
+      should.equal(result.score.info.doors, 'none');
     });
   });
 
   it('should award 5 points for one-word description', function() {
-    return site.checkDescription(jsonBody.verboseRoom(1),{}).then(function(result) {
+    params.site = jsonBody.verboseRoom(1, false);
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 6); // full name (5), one-word description (5)
-      (result.info.empty).should.be.false();
-      (result.info.fullName).should.be.true();
-      should.equal(result.info.description, '1 word');
-      should.equal(result.info.doors, 'none');
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.true();
+      should.equal(result.score.info.description, '1 word');
+      should.equal(result.score.info.doors, 'none');
+    });
+  });
+
+  it('should award 5 points for one repeated word description', function() {
+    params.site = jsonBody.verboseRoom(6, false);
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
+      verifyResult(result, 6); // full name (5), one-word description (5)
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.true();
+      should.equal(result.score.info.description, '1 word');
+      should.equal(result.score.info.doors, 'none');
     });
   });
 
   it('should award 30 points for six-word description', function() {
-    return site.checkDescription(jsonBody.verboseRoom(6),{}).then(function(result) {
+    params.site = jsonBody.verboseRoom(6, true);
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 11); // full name (5), 6 word description (6)
-      (result.info.empty).should.be.false();
-      (result.info.fullName).should.be.true();
-      should.equal(result.info.description, '6 words');
-      should.equal(result.info.doors, 'none');
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.true();
+      should.equal(result.score.info.description, '6 words');
+      should.equal(result.score.info.doors, 'none');
     });
   });
 
   it('should award 1 point for one unique door', function() {
-    return site.checkDescription(jsonBody.doorsAlone(1, false),{}).then(function(result) {
+    params.site = jsonBody.doorsAlone(1, false);
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 6); // full name (5), no description, one door
-      (result.info.empty).should.be.false();
-      (result.info.fullName).should.be.true();
-      should.equal(result.info.description, 'none');
-      should.equal(result.info.doors, '1 unique door');
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.true();
+      should.equal(result.score.info.description, 'none');
+      should.equal(result.score.info.doors, '1 unique door');
     });
   });
 
   it('should award 1 point for multiple doors w/ same description', function() {
-    return site.checkDescription(jsonBody.doorsAlone(3, false),{}).then(function(result) {
+    params.site = jsonBody.doorsAlone(3, false);
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 6); // full name (5), no description, one unique door
-      (result.info.empty).should.be.false();
-      (result.info.fullName).should.be.true();
-      should.equal(result.info.description, 'none');
-      should.equal(result.info.doors, '1 unique door');
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.true();
+      should.equal(result.score.info.description, 'none');
+      should.equal(result.score.info.doors, '1 unique door');
     });
   });
 
   it('should award 2 points for two doors w/ unique descriptions', function() {
-    return site.checkDescription(jsonBody.doorsAlone(2, true),{}).then(function(result) {
+    params.site = jsonBody.doorsAlone(2, true);
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 7); // full name (5), no description, two unique doors (2)
-      (result.info.empty).should.be.false();
-      (result.info.fullName).should.be.true();
-      should.equal(result.info.description, 'none');
-      should.equal(result.info.doors, '2 unique doors');
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.true();
+      should.equal(result.score.info.description, 'none');
+      should.equal(result.score.info.doors, '2 unique doors');
     });
   });
 
   it('should award 5 points for 5 unique doors', function() {
-    return site.checkDescription(jsonBody.doorsAlone(5, true),{}).then(function(result) {
+    params.site = jsonBody.doorsAlone(5, true);
+
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 10); // full name (5), no description, five unique doors (5)
-      (result.info.empty).should.be.false();
-      (result.info.fullName).should.be.true();
-      should.equal(result.info.description, 'none');
-      should.equal(result.info.doors, '5 unique doors');
+      (result.score.info.nameDefined).should.be.true();
+      (result.score.info.fullName).should.be.true();
+      should.equal(result.score.info.description, 'none');
+      should.equal(result.score.info.doors, '5 unique doors');
     });
   });
+
+    it('should remember path when coordinates are present', function() {
+      params.site = jsonBody.slim();
+
+      let evaluator = new SiteEvaluator(params);
+      return evaluator.checkDescription().then(function(result) {
+        should.exist(result.path);
+      });
+    });
 });

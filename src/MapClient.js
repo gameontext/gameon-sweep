@@ -54,9 +54,13 @@ class MapClient {
   /*
    * Fetch Room/Site information from the map service
    */
-  fetchSite(id) {
+  fetchSite(site) {
+    // if ( site.info && site.info.connectionDetails ) {
+    //   return Promise.resolve(site);
+    // }
+
     let options = {
-      uri: this.map_url + id,
+      uri: this.map_url + site._id,
       json: true,
     };
 

@@ -13,8 +13,8 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
-const MapClient = require('./actions/MapClient.js');
-const ScoreBook = require('./actions/ScoreBook.js')
+const MapClient = require('./src/MapClient.js');
+const ScoreBook = require('./src/ScoreBook.js')
 const Cloudant = require('cloudant');
 const Promise = require('bluebird');
 const assert = require('assert');
