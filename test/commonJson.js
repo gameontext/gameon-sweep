@@ -83,10 +83,10 @@ var firstRoom = {
 };
 
 function makeDoors(number, unique) {
-  var directions = ['n','s','e','w','u','d'];
-  var doors = {};
+  let directions = ['n','s','e','w','u','d'];
+  let doors = {};
 
-  for (var i = 0; i < number && i < directions.length; i++) {
+  for (let i = 0; i < number && i < directions.length; i++) {
     doors[directions[i]] = 'A door ';
     if ( unique ) {
       doors[directions[i]] += 'going ' + directions[i];
@@ -96,8 +96,8 @@ function makeDoors(number, unique) {
 }
 
 function makeDescription(number, unique) {
-  var description = '';
-  for (var i = 0; i < number; i++) {
+  let description = '';
+  for (let i = 0; i < number; i++) {
     if ( unique ) {
       description += i;
     }

@@ -60,15 +60,73 @@ class ScoreBook {
   }
 
   getScore(id) {
-    var cloudantDb = this.cloudant.use(this.dbName);
+    let cloudantDb = this.cloudant.use(this.dbName);
     return get(cloudantDb, id);
   }
 
   getScores() {
-    var cloudantDb = this.cloudant.use(this.dbName);
+    let cloudantDb = this.cloudant.use(this.dbName);
     return get_view(cloudantDb, 'scores', 'all_scores', {
-      descending: true
+      // descending: true
     });
+  }
+
+  /*
+   * Yes! this is some kind of deranged bubble sort.
+   * Single pass, as we actually swap sites in the DB
+   * when we're done. We're relying on _many subsequent
+   * invocations to eventually get sites sorted-ish.
+   */
+  findSiteSwaps(all_scores) {
+    // Filter out firstRoom and rooms with unassigned/null values
+    let scores = all_scores.filter(elem => elem.id !== 'firstroom' );
+    // Scores come back: [ { id: id, key: score, value: path }, ... ]
+    // highest score is first.
+
+    // keep track of rooms eligible for swapping
+    let swap_eligible = {};
+    for(let i = 0; i < scores.length; i++) {
+      swap_eligible[scores[i].id] = 1;
+    }
+
+    let swaps = [];
+    let i = 0;
+    let j = 0;
+
+    // iterate by ascending score..
+    for(i; i < scores.length; i++) {
+      let score1 = scores[i];
+
+      // if this score is still eligible for swapping, then..
+      if ( !!swap_eligible[score1.id] ) {
+        // iterate from high score to low score: favor big jumps
+        for(let j = scores.length - 1; j >= 0; j--) {
+          let score2 = scores[j];
+
+          if ( score1.key >= score2.key ) {
+            // done with this. We're now looking at scores smaller than ours.
+            //console.log(`LAST: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
+            break;
+          } else if ( !swap_eligible[score2.id] ) {
+            continue;
+          } else if ( score1.value == score2.value ) {
+            //console.log(`SKIP: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
+            continue;
+          } else if ( score1.value < score2.value ) {
+            console.log(`SWAP: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
+            // remove scores from eligibility
+            delete swap_eligible[score1.id];
+            delete swap_eligible[score2.id];
+            swaps.push([score1, score2]);
+            break;
+          } else {
+            //console.log(`????: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
+          }
+        }
+      }
+    }
+
+    return swaps;
   }
 }
 

@@ -79,8 +79,8 @@ class SiteEvaluator {
 
         // Check doors. More points for more (unique) doors
         if ( !!site.info.doors ) {
-          var descriptions = Object.values(site.info.doors);
-          var uniqueDoors = descriptions.filter(onlyUnique);
+          let descriptions = Object.values(site.info.doors);
+          let uniqueDoors = descriptions.filter(onlyUnique);
           if ( uniqueDoors.length > 0 ) {
             score.doors = uniqueDoors.length + ' unique door' + ( uniqueDoors.length == 1 ? '' : 's');
             score.total += uniqueDoors.length;
@@ -137,7 +137,7 @@ class SiteEvaluator {
       score.total += 2;    // It is not a Game On! URL (or we own it) -- 4
     }
 
-    var options = {
+    let options = {
       uri: url,
       headers: { 'User-Agent': 'Game On! Sweep' }
     };
@@ -150,9 +150,9 @@ class SiteEvaluator {
       score.total += 6;    // It is not a Game On! URL -- 10
 
       // I give up with regex. This works.
-      var pos1 = body.indexOf('<div class="repository-lang-stats-graph');
-      var pos2 = body.indexOf('</div>', pos1)
-      var languages = body.substring(pos1,pos2);
+      let pos1 = body.indexOf('<div class="repository-lang-stats-graph');
+      let pos2 = body.indexOf('</div>', pos1)
+      let languages = body.substring(pos1,pos2);
 
       // Super primitive scraping here. Relying on GitHub not to mess with this much
       score.src = ( languages.indexOf('itemprop="keywords">Java') >= 0 || // covers JavaScript
@@ -246,12 +246,12 @@ class SiteEvaluator {
     score.health = {};
 
     // Only http or https, no query string or spaces
-    var url = connectionDetails.healthUrl.trim();
+    let url = connectionDetails.healthUrl.trim();
     score.health.valid = /^(http|https):\/\/[^ "?]+$/.test(url);
 
     if ( score.health.valid ) {
       score.total += 5; // URL is valid and not-empty -- 5
-      var options = {
+      let options = {
         uri: url,
         headers: { 'User-Agent': 'Game On! Sweep' }
       };
@@ -299,13 +299,13 @@ class SiteEvaluator {
       }
 
       // target is only ws or wss, no query string or spaces
-      var url = connectionDetails.target.trim();
+      let url = connectionDetails.target.trim();
       score.target.valid = /^(ws|wss):\/\/[^ "?]+$/.test(url);
       if ( score.target.valid ) {
         score.total += 5; // URL is valid and not-empty -- 5
 
         // Try connection, test room
-        var roomClient = new RoomClient(id, url, score.target.token);
+        let roomClient = new RoomClient(id, url, score.target.token);
         return roomClient.tryRoom(self.params);
       }
     } else {
@@ -322,8 +322,8 @@ class SiteEvaluator {
     let results = this.params.score || {};
 
     // Grand total
-    var total = 0;
-    var values = Object.values(results);
+    let total = 0;
+    let values = Object.values(results);
     for(let i  = 0; i < values.length; i++ ) {
       if ( values[i] && values[i].total ) {
         total += parseInt(values[i].total); // force number
@@ -363,7 +363,7 @@ function retry(options, get, interval) {
 
 function jsonStatus(score, body, match) {
   try {
-    var health = JSON.parse(body);
+    let health = JSON.parse(body);
     score.health.json = true;
     score.total += 5; // valid json
 

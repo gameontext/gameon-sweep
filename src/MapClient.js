@@ -51,19 +51,22 @@ class MapClient {
     });
   }
 
+  fetch(id) {
+    return this.fetchSite({ _id: id });
+  }
+
   /*
    * Fetch Room/Site information from the map service
    */
   fetchSite(site) {
-    // if ( site.info && site.info.connectionDetails ) {
-    //   return Promise.resolve(site);
-    // }
+    if ( site.info && site.info.connectionDetails ) {
+      return Promise.resolve(site);
+    }
 
     let options = {
       uri: this.map_url + site._id,
       json: true,
     };
-
     signRequest(options, this.sweepId, this.sweepSecret);
 
     // Fetch the site description from the Map
@@ -73,7 +76,8 @@ class MapClient {
       if ( err.response ) {
         return Promise.reject({
           statusCode: err.response.statusCode,
-          statusMessage: err.response.statusMessage
+          statusMessage: err.response.statusMessage,
+          error: err
         });
       } else {
         return Promise.reject(err);
@@ -104,6 +108,7 @@ class MapClient {
     return rp.put(options)
     .then(function(result) {
       console.log(`Sites swapped: ${result}`);
+      return result;
     })
     .catch(function(err) {
       console.log("Swap Site request error:");

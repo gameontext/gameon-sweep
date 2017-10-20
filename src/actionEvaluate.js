@@ -21,11 +21,6 @@ const SiteEvaluator = require('./SiteEvaluator.js');
 const MapClient = require('./MapClient.js');
 const ScoreBook = require('./ScoreBook.js');
 
-/**
- * Fetch information about a room (and backing site) from the map.
- * Return promise that resolves to array of further actions based
- * on what is known about the room.
- */
 function siteScore (params) {
   let site_info = params.site || { '_id': 'firstroom' };
 
