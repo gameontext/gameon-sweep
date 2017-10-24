@@ -32,7 +32,7 @@ zip -u ${BUILD}/base.zip MapClient.js RoomClient.js ScoreBook.js SiteEvaluator.j
 cd ${BUILD}
 
 # Common parameters
-common="-p sweep_id ${SWEEP_ID} -p sweep_secret ${SWEEP_SECRET}"
+common="-p sweep_id ${SWEEP_ID} -p sweep_secret ${SWEEP_SECRET} -p cloudant_url ${CLOUDANT_URL}"
 
 # Coordinated timeouts for sequence
 # actionScoreAll
@@ -55,16 +55,13 @@ for x in $actions; do
 
   case $name in
     actionEvaluate)
-      wsk_args="-p cloudant_url ${CLOUDANT_URL} -t 280000"
+      wsk_args=" -t 280000"
     ;;
     actionScoreAll)
       wsk_args='-t 300000'
     ;;
-    actionSwap)
-      wsk_args="-p cloudant_url ${CLOUDANT_URL} -t 300000"
-    ;;
     *)
-      wsk_args=
+      wsk_args="-t 60000"
     ;;
   esac
 

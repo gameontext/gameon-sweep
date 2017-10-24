@@ -64,6 +64,17 @@ class ScoreBook {
     return get(cloudantDb, id);
   }
 
+  updatePath(id, path, marker) {
+    let cloudantDb = this.cloudant.use(this.dbName);
+    return get(cloudantDb, id)
+    .then(function(score) {
+      console.log(score);
+      score.path = path;
+      score.marker = marker;
+      return insert(cloudantDb, score);
+    });
+  }
+
   getScores() {
     let cloudantDb = this.cloudant.use(this.dbName);
     return get_view(cloudantDb, 'scores', 'all_scores', {
@@ -135,6 +146,7 @@ class ScoreBook {
  */
 function insert(cloudantDb, score) {
   return new Promise(function(resolve, reject) {
+    console.log("insert: " + score);
     cloudantDb.insert(score, function(error, response) {
       if (!error) {
         // console.log("success", response);
