@@ -54,7 +54,7 @@ function siteSwap (params) {
       let a = swaps[i][0];
       let b = swaps[i][1];
 
-      promises.push(new function() {
+      promises.push(function() {
         return getClient.fetch(a.id).then(function (site_1) {
           return getClient.fetch(b.id).then(function (site_2) {
             return swapClient.swap_sites(site_1, site_2)
@@ -85,7 +85,7 @@ function siteSwap (params) {
 
       // Someday, stop doing this. ATM: we want to reflect new paths
       // params.post_sweep = true;
-      return ow.actions.invoke('sweep/actionScoreAll', params)
+      return ow.actions.invoke('sweep/actionPath', params)
       .then(function() {
         return result;
       });
