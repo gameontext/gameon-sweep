@@ -111,8 +111,7 @@ class MapClient {
       return result;
     })
     .catch(function(err) {
-      console.log("Swap Site request error:");
-      console.log(err);
+      console.log("Swap Site request error:", err);
       if ( err.response ) {
         return Promise.reject({
           statusCode: err.response.statusCode,

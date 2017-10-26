@@ -68,17 +68,25 @@ class ScoreBook {
     let cloudantDb = this.cloudant.use(this.dbName);
     return get(cloudantDb, id)
     .then(function(score) {
-      console.log(score);
-      score.path = path;
-      score.marker = marker;
-      return insert(cloudantDb, score);
+      if ( score.path && score.path !== path ) {
+        console.log(`site ${id} has path ${path}`);
+        score.path = path;
+        score.marker = marker;
+        return insert(cloudantDb, score);
+      } else {
+        return Promise.resolve({
+          id: id,
+          path: path,
+          score: score.path,
+          status: "ok"
+        });
+      }
     });
   }
 
   getScores() {
     let cloudantDb = this.cloudant.use(this.dbName);
     return get_view(cloudantDb, 'scores', 'all_scores', {
-      // descending: true
     });
   }
 
@@ -92,7 +100,6 @@ class ScoreBook {
     // Filter out firstRoom and rooms with unassigned/null values
     let scores = all_scores.filter(elem => elem.id !== 'firstroom' );
     // Scores come back: [ { id: id, key: score, value: path }, ... ]
-    // highest score is first.
 
     // keep track of rooms eligible for swapping
     let swap_eligible = {};
@@ -100,13 +107,33 @@ class ScoreBook {
       swap_eligible[scores[i].id] = 1;
     }
 
-    let swaps = [];
+    let result = {
+      swaps: [],
+      high: (scores[scores.length - 1].key),
+      low: 0,
+      median: 0,
+      non_empty: 0
+    };
+
     let i = 0;
     let j = 0;
 
     // iterate by ascending score..
     for(i; i < scores.length; i++) {
       let score1 = scores[i];
+
+      // ignore empty rooms when calculating stats
+      if ( result.median === 0  && score1.key >= 0 ) {
+        result.low = score1.key; // first non-empty room
+        result.non_empty = scores.length - i +1;
+        let median_x = Math.floor(result.non_empty / 2) + i;
+        result.median = scores[median_x].key; // find the middle...
+        console.log("scores.length", scores.length);
+        console.log("first non-empty i", i);
+        console.log("number of non-empty rooms", result.non_empty);
+        console.log("median index", median_x);
+        console.log("median", result.median);
+      }
 
       // if this score is still eligible for swapping, then..
       if ( !!swap_eligible[score1.id] ) {
@@ -128,7 +155,7 @@ class ScoreBook {
             // remove scores from eligibility
             delete swap_eligible[score1.id];
             delete swap_eligible[score2.id];
-            swaps.push([score1, score2]);
+            result.swaps.push([score1, score2]);
             break;
           } else {
             //console.log(`????: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
@@ -137,7 +164,7 @@ class ScoreBook {
       }
     }
 
-    return swaps;
+    return result;
   }
 }
 
@@ -146,13 +173,13 @@ class ScoreBook {
  */
 function insert(cloudantDb, score) {
   return new Promise(function(resolve, reject) {
-    console.log("insert: " + score);
+    // console.log("insert: " + score);
     cloudantDb.insert(score, function(error, response) {
       if (!error) {
         // console.log("success", response);
         resolve(response);
       } else {
-        // console.log("error", error);
+        console.log("error", error);
         reject(error);
       }
     });
@@ -168,9 +195,14 @@ function get(cloudantDb, id) {
       if (!err) {
         // console.log("success retrieving score for ", id);
         resolve(data);
+      } else if ( err.statusCode === 404 ) {
+        // New site, no score. All is well.
+        resolve({
+          _id: id
+        });
       } else {
-        // console.log("error", err);
-        reject(err);
+        console.log("error", err);
+        return reject(err);
       }
     })
   })
