@@ -87,14 +87,14 @@ function compareScores(params, scorebook, getClient, ow) {
             let a_path = Math.abs(site_1.coord.x) + Math.abs(site_1.coord.y);
             if ( a.value != a_path ) {
               console.log(`SKIPPED: ${a.value} != ${a_path} for ${a.id}`);
-              reject({ skip: true });
+              resolve({ skip: true });
             } else {
               getClient.fetch(b.id)
               .then(function(site_2) {
                 let b_path = Math.abs(site_2.coord.x) + Math.abs(site_2.coord.y);
                 if ( b.value != b_path ) {
                   console.log(`SKIPPED: ${b.value} != ${b_path} for ${b.id}`);
-                  reject({ skip: true });
+                  resolve({ skip: true });
                 } else {
                   // queue swap operation
                   let px = JSON.parse(JSON.stringify(params)); // copy / prevent mutation
@@ -122,7 +122,8 @@ function compareScores(params, scorebook, getClient, ow) {
       return Promise.all(promises).then(function (results) {
         console.log(results);
         return resolve({actions: promises.length});
-      });
+      })
+      .then(ow.actions.invoke({actionName: 'sweep/actionPath', params: {}}));
     })
     .catch(function(err) {
       return reject({error: err});
