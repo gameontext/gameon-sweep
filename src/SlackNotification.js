@@ -22,7 +22,7 @@ class SlackNotification {
   constructor(slack_url) {
     assert.ok(slack_url, 'Please provide a slack webhook (slack_url)');
     this.slack_url = slack_url;
-    this.channel = '#build';
+    this.channel = '#sweep';
   }
 
   scoreStart() {
