@@ -14,6 +14,7 @@
  * the License.
  ******************************************************************************/
 const MapClient = require('./MapClient.js');
+const SlackNotification = require('./SlackNotification.js');
 const openwhisk = require('openwhisk');
 
 /**
@@ -23,17 +24,18 @@ const openwhisk = require('openwhisk');
  */
 function scoreAll(params) {
   let url = params.url || 'https://gameontext.org/map/v1/sites/';
-  let sweep_id = params.sweep_id || '';
-  let sweep_secret = params.sweep_secret || '';
-  let ow = openwhisk();
 
-  let mapClient = new MapClient(url, sweep_id, sweep_secret);
+  let ow = openwhisk();
+  let mapClient = new MapClient(url, params.sweep_id, params.sweep_secret);
+  let slack = new SlackNotification(params.slack_url);
 
   params.marker = Date.now();
   return new Promise(function(resolve, reject) {
     let action_list = [];
     mapClient.fetchSites()
     .then(function(all_sites) {
+      action_list.push(slack.scoreStart());
+
       // kick off a new asynchronous action for each site
       for(let i = 0; i < all_sites.length; i++ ) {
         let px = JSON.parse(JSON.stringify(params)); // copy / prevent mutation

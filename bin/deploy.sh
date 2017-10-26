@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z "$SWEEP_ID" ] || [ -z "$SWEEP_SECRET" ] || [ -z "$CLOUDANT_URL" ]; then
+if [ -z "$SWEEP_ID" ] || [ -z "$SWEEP_SECRET" ] || [ -z "$CLOUDANT_URL" ] || [ -z ${SLACK_URL} ]; then
   echo "Check environment variables -- some are missing!"
   exit
 fi
@@ -27,12 +27,12 @@ cd ${SRC}
 actions=$(find -name 'action*')
 
 # Let's add the common modules
-zip -u ${BUILD}/base.zip MapClient.js RoomClient.js ScoreBook.js SiteEvaluator.js
+zip -u ${BUILD}/base.zip MapClient.js RoomClient.js ScoreBook.js SiteEvaluator.js SlackNotification.js
 
 cd ${BUILD}
 
 # Common parameters
-common="-p sweep_id ${SWEEP_ID} -p sweep_secret ${SWEEP_SECRET} -p cloudant_url ${CLOUDANT_URL}"
+common="-p sweep_id ${SWEEP_ID} -p sweep_secret ${SWEEP_SECRET} -p cloudant_url ${CLOUDANT_URL} -p slack_url ${SLACK_URL}"
 
 # Coordinated timeouts for sequence
 # actionScoreAll
@@ -55,13 +55,10 @@ for x in $actions; do
 
   case $name in
     actionEvaluate)
-      wsk_args=" -t 280000"
-    ;;
-    actionScoreAll)
-      wsk_args='-t 300000'
+      wsk_args="-t 280000"
     ;;
     *)
-      wsk_args="-t 60000"
+      wsk_args='-t 300000'
     ;;
   esac
 

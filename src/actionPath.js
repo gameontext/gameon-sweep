@@ -45,14 +45,11 @@ function updatePath(params) {
       let site = all_sites[i];
       if ( site.coord ) {
         let path = Math.abs(site.coord.x) + Math.abs(site.coord.y);
-        console.log(`site ${site._id} has new path ${path}`);
-
         promises.push(scorebook.updatePath(site._id, path, marker));
       }
     }
 
     return Promise.all(promises).then(function(results) {
-      console.log(results);
       return {
         marker: marker,
         count: promises.length,

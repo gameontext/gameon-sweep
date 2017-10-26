@@ -21,6 +21,7 @@ const openwhisk = require('openwhisk');
 const SiteEvaluator = require('./SiteEvaluator.js');
 const MapClient = require('./MapClient.js');
 const ScoreBook = require('./ScoreBook.js');
+const SlackNotification = require('./SlackNotification.js');
 
 function siteSwap (params) {
   let sweep_id = params.sweep_id || '';
@@ -38,66 +39,95 @@ function siteSwap (params) {
   let cloudant = Cloudant({url: cloudant_url});
   let cloudant_db = params.cloudant_db || 'sweep_score';
   let scorebook = new ScoreBook(cloudant, 'sweep_score');
-
   let ow = openwhisk();
 
-  return scorebook.getScores().then(function(all_scores) {
-    let swaps = scorebook.findSiteSwaps(all_scores.rows);
-
-    let result = {};
-    result.success = [];
-
-    let promises = [];
-
-    for (let i = 0; i < swaps.length; i++) {
-
-      let a = swaps[i][0];
-      let b = swaps[i][1];
-
-      promises.push(function() {
-        return getClient.fetch(a.id).then(function (site_1) {
-          return getClient.fetch(b.id).then(function (site_2) {
-            return swapClient.swap_sites(site_1, site_2)
-            .then(function(swap_result) {
-              result.success.push({
-                a: a.id,
-                b: b.id
-              });
-              return true;
-            });
-          });
-        })
-        .catch(function(error) {
-          result.error = result.error || [];
-          result.error.push({
-            a: a.id,
-            b: b.id,
-            error: error
-          });
-          return true;
-        });
+  if ( !!params.swap_sites ) {
+    let a = params.swap_sites.site_1;
+    let b = params.swap_sites.site_2;
+    return swapClient.swap_sites(a, b)
+    .then(function(swap_result) {
+      console.log(swap_result);
+      return Promise.resolve({
+        a: a.id,
+        b: b.id,
+        status: swap_result.status
       });
-    }
-
-    return Promise.all(promises)
-    .then(function() {
-      console.log(result);
-
-      // Someday, stop doing this. ATM: we want to reflect new paths
-      // params.post_sweep = true;
-      return ow.actions.invoke('sweep/actionPath', params)
-      .then(function() {
-        return result;
-      });
-    })
-  })
-  .catch(handleError);
-
+    });
+  } else {
+    return compareScores(params, scorebook, getClient, ow);
+  }
 }
 
-function handleError(err) {
-  console.log(err);
-  return Promise.reject(err);
+function compareScores(params, scorebook, getClient, ow) {
+  let slack = new SlackNotification(params.slack_url);
+
+  return new Promise(function(resolve, reject) {
+    scorebook.getScores().then(function(all_scores) {
+    //   return slack.swapStart(all_scores.rows.length)
+    //   .then(function(){return all_scores});
+    // })
+    // .then(function(all_scores) {
+      let promises = [];
+      let stats = scorebook.findSiteSwaps(all_scores.rows);
+
+      promises.push(slack.swapStats(
+        `All sorted. Out of ${stats.non_empty} rooms: \n`
+        + ` :+1: The high score was ${stats.high}\n`
+        + ` :v: The median score was ${stats.median}\n`
+        + ` :-1: The low score was ${stats.low}\n`
+      ));
+
+      for (let i = 0; i < stats.swaps.length; i++) {
+        promises.push(new Promise(function(resolve,reject) {
+          let a = stats.swaps[i][0];
+          let b = stats.swaps[i][1];
+          console.log("-- site " + i + `: ${a.id} and ${b.id}`);
+          getClient.fetch(a.id)
+          .then(function(site_1) {
+            let a_path = Math.abs(site_1.coord.x) + Math.abs(site_1.coord.y);
+            if ( a.value != a_path ) {
+              console.log(`SKIPPED: ${a.value} != ${a_path} for ${a.id}`);
+              reject({ skip: true });
+            } else {
+              getClient.fetch(b.id)
+              .then(function(site_2) {
+                let b_path = Math.abs(site_2.coord.x) + Math.abs(site_2.coord.y);
+                if ( b.value != b_path ) {
+                  console.log(`SKIPPED: ${b.value} != ${b_path} for ${b.id}`);
+                  reject({ skip: true });
+                } else {
+                  // queue swap operation
+                  let px = JSON.parse(JSON.stringify(params)); // copy / prevent mutation
+                  px.swap_sites = {site_1, site_2};
+
+                  let name_1 = !!site_1.info ? site_1.info.name : a.id;
+                  let name_2 = !!site_2.info ? site_2.info.name : b.id;
+
+                  let msg = `${name_1}[${a.key}/${a.value}] will be swapped with ${name_2}[${b.key}/${b.value}]`;
+                  console.log(msg);
+
+                  ow.actions.invoke({actionName: 'sweep/actionSwap', params: px})
+                  .then(slack.swap(msg))
+                  .then(function() {
+                    console.log('Done');
+                    resolve(true);
+                  });
+                }
+              })
+            }
+          })
+        }));
+      }
+
+      return Promise.all(promises).then(function (results) {
+        console.log(results);
+        return resolve({actions: promises.length});
+      });
+    })
+    .catch(function(err) {
+      return reject({error: err});
+    });
+  });
 }
 
 
