@@ -73,9 +73,9 @@ function compareScores(params, scorebook, getClient, ow) {
       promises.push(slack.swapStats(
         `All sorted. Out of ${stats.non_empty} rooms: \n`
         + ` :+1: The high score was ${stats.high}\n`
-        + ` :ok_hand: The first quartile score was ${stats.first_quartile}\n`
+        + ` :ok_hand: The third quartile score was ${stats.third_quartile}\n`
         + ` :v: The median score was ${stats.median}\n`
-        + ` :point_up: The third quartile score was ${stats.third_quartile}\n`
+        + ` :point_up: The first quartile score was ${stats.first_quartile}\n`
         + ` :-1: The low score was ${stats.low}\n`
       ));
 
