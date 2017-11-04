@@ -112,6 +112,8 @@ class ScoreBook {
       high: (scores[scores.length - 1].key),
       low: 0,
       median: 0,
+      first_quartile: 0,
+      third_quartile: 0,
       non_empty: 0
     };
 
@@ -127,7 +129,10 @@ class ScoreBook {
         result.low = score1.key; // first non-empty room
         result.non_empty = scores.length - i +1;
         let median_x = Math.floor(result.non_empty / 2) + i;
+        let quart_x = Math.floor(median_x / 2);
         result.median = scores[median_x].key; // find the middle...
+        result.first_quartile = scores[median_x - quart_x].key;
+        result.third_quartile = scores[median_x + quart_x].key;
         console.log("scores.length", scores.length);
         console.log("first non-empty i", i);
         console.log("number of non-empty rooms", result.non_empty);
