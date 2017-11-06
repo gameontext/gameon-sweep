@@ -54,11 +54,11 @@ function siteSwap (params) {
       });
     });
   } else {
-    return compareScores(params, scorebook, getClient, ow);
+    return compareScores(params, scorebook, getClient);
   }
 }
 
-function compareScores(params, scorebook, getClient, ow) {
+function compareScores(params, scorebook, getClient) {
   let slack = new SlackNotification(params.slack_url);
 
   return new Promise(function(resolve, reject) {
@@ -125,8 +125,7 @@ function compareScores(params, scorebook, getClient, ow) {
     .catch(function(err) {
       return reject({error: err});
     });
-  })
-  .then(ow.actions.invoke({actionName: 'sweep/actionPath', params: {}}));
+  });
 }
 
 exports.main = siteSwap;

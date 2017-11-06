@@ -16,6 +16,7 @@
 const assert = require('assert');
 const Promise = require('bluebird');
 const Cloudant = require('cloudant');
+const openwhisk = require('openwhisk');
 
 const MapClient = require('./MapClient.js');
 const ScoreBook = require('./ScoreBook.js');
@@ -35,6 +36,7 @@ function updatePath(params) {
   let cloudant = Cloudant({url: cloudant_url});
   let cloudant_db = params.cloudant_db || 'sweep_score';
   let scorebook = new ScoreBook(cloudant, cloudant_db);
+  let ow = openwhisk();
 
   let marker = Date.now();
 
@@ -57,7 +59,8 @@ function updatePath(params) {
         count: promises.length,
         results: results
       };
-    }).then(new Promise(function(resolve, reject) {
+    })
+    .then(new Promise(function(resolve, reject) {
       scorebook.getOrphanScores(known_ids)
       .then(function(orphanScores) {
         if ( orphanScores.length > 0 ) {
@@ -86,6 +89,7 @@ function updatePath(params) {
       });
     }));
   })
+  .then(ow.actions.invoke({actionName: 'sweep/actionSwap', params: params}))
   .catch(function(err) {
     return Promise.reject({error: err});
   });
