@@ -19,8 +19,9 @@ const Cloudant = require('cloudant');
 const Promise = require('bluebird');
 const assert = require('assert');
 
-let sweepId = process.env['SWEEP_ID'] || '';
-let sweepSecret = process.env['SWEEP_SECRET'] || '';
+let sweepId = process.env.SWEEP_ID || '';
+let sweepSecret = process.env.SWEEP_SECRET || '';
+let slack_url = process.env.SLACK_URL;
 
 let cloudant = Cloudant({url: process.env.CLOUDANT_URL});
 let scorebook = new ScoreBook(cloudant, 'sweep_score');
@@ -46,24 +47,17 @@ if ( process.argv.length >= 4 ) {
   .catch(handleError);
 } else {
   scorebook.getScores().then(function(all_scores) {
-    let swaps = scorebook.findSiteSwaps(all_scores.rows);
+    let stats = scorebook.findSiteSwaps(all_scores.rows);
 
-    console.log(swaps);
-    // for (i = 0; i < swaps.length; i++) {
-    //   let a = swaps[i][0];
-    //   let b = swaps[i][1];
-    //   let delay = 500*i;
-    //   getClient.fetch(a.id).then(function (site_1) {
-    //     getClient.fetch(b.id).then(function (site_2) {
-    //       console.log(`queue swap of ${a.id} and ${b.id} for ${delay}`);
-    //       Promise.delay(delay).then(function() {
-    //         // return swapClient.swap_sites(site_1, site_2)
-    //         //        .catch(handleError);
-    //       });
-    //     });
-    //   })
-    //   .catch(handleError);
-    // }
+    console.log(
+      `All sorted. Out of ${stats.non_empty} rooms: \n`
+      + ` :+1: The high score was ${stats.high}\n`
+      + ` :ok_hand: The third quartile score was ${stats.third_quartile}\n`
+      + ` :v: The median score was ${stats.median}\n`
+      + ` :point_up: The first quartile score was ${stats.first_quartile}\n`
+      + ` :-1: The low score was ${stats.low}\n`
+    );
+
   })
   .catch(handleError);
 }

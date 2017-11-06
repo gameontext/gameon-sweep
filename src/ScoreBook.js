@@ -129,16 +129,20 @@ class ScoreBook {
       if ( result.median === 0  && score1.key >= 0 ) {
         result.low = score1.key; // first non-empty room
         result.non_empty = scores.length - i +1;
-        let median_x = Math.floor(result.non_empty / 2) + i;
-        let quart_x = Math.floor(median_x / 2);
-        result.median = scores[median_x].key; // find the middle...
-        result.first_quartile = scores[median_x - quart_x].key;
-        result.third_quartile = scores[median_x + quart_x].key;
         console.log("scores.length", scores.length);
         console.log("first non-empty i", i);
         console.log("number of non-empty rooms", result.non_empty);
-        console.log("median index", median_x);
+
+        let median_x = Math.floor(result.non_empty / 2) + i;
+        let quart_x = Math.floor(result.non_empty / 4);
+        console.log("median index", median_x, "; quartile +/-", quart_x);
+
+        result.median = scores[median_x].key; // find the middle...
+        result.first_quartile = scores[median_x - quart_x].key;
+        result.third_quartile = scores[median_x + quart_x].key;
+        console.log("first", result.first_quartile);
         console.log("median", result.median);
+        console.log("third", result.third_quartile);
       }
 
       // if this score is still eligible for swapping, then..
