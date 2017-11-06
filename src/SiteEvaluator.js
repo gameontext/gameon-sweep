@@ -337,7 +337,7 @@ class SiteEvaluator {
     results.path = this.params.path;
     results.type = this.params.site.type;
 
-    console.log(`RACK THEM UP! ${this.params.site.name} has earned ${total} points`);
+    console.log(`RACK THEM UP! ${this.params.site.info.name} has earned ${total} points`);
     return results;
   }
 };

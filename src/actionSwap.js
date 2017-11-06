@@ -63,10 +63,6 @@ function compareScores(params, scorebook, getClient, ow) {
 
   return new Promise(function(resolve, reject) {
     scorebook.getScores().then(function(all_scores) {
-    //   return slack.swapStart(all_scores.rows.length)
-    //   .then(function(){return all_scores});
-    // })
-    // .then(function(all_scores) {
       let promises = [];
       let stats = scorebook.findSiteSwaps(all_scores.rows);
 
@@ -124,14 +120,13 @@ function compareScores(params, scorebook, getClient, ow) {
       return Promise.all(promises).then(function (results) {
         console.log(results);
         return resolve({actions: promises.length});
-      })
-      .then(ow.actions.invoke({actionName: 'sweep/actionPath', params: {}}));
+      });
     })
     .catch(function(err) {
       return reject({error: err});
     });
-  });
+  })
+  .then(ow.actions.invoke({actionName: 'sweep/actionPath', params: {}}));
 }
-
 
 exports.main = siteSwap;

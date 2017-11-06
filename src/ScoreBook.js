@@ -85,6 +85,7 @@ class ScoreBook {
   }
 
   getScores() {
+    console.log("Fetch all scores");
     let cloudantDb = this.cloudant.use(this.dbName);
     return get_view(cloudantDb, 'scores', 'all_scores', {
     });
@@ -156,7 +157,7 @@ class ScoreBook {
             //console.log(`SKIP: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
             continue;
           } else if ( score1.value < score2.value ) {
-            console.log(`SWAP: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
+            console.log(`SWAP: [${i}] ${score1.key} ${score1.value} <-- [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
             // remove scores from eligibility
             delete swap_eligible[score1.id];
             delete swap_eligible[score2.id];
@@ -170,6 +171,34 @@ class ScoreBook {
     }
 
     return result;
+  }
+
+  getOrphanScores(known_ids) {
+    let cloudantDb = this.cloudant.use(this.dbName);
+    console.log("Clear deleted sites, but definitely not these: ", Object.keys(known_ids).length);
+
+    return get_view(cloudantDb, 'scores', 'all_scores', {})
+    .then(function(all_scores) {
+      console.log("Comparing sites against known scores: ", all_scores.rows.length);
+
+      // Filter out any score that matches a site/room we know exists
+      let scores = all_scores.rows.filter( elem => !known_ids[elem.id]);
+      console.log('Filtered to: ', scores.length);
+
+      return Promise.resolve(scores);
+    })
+    .catch(function(err) {
+      console.log("error: ", err)
+    });
+  }
+
+  deleteScore(id) {
+    let cloudantDb = this.cloudant.use(this.dbName);
+    // find a previous score for this document
+    return getRevision(cloudantDb, id)
+    .then(function(revision) {
+      return destroy(cloudantDb, id, revision);
+    });
   }
 }
 
@@ -238,7 +267,6 @@ function getRevision(cloudantDb, id) {
   });
 }
 
-
 function get_view(cloudantDb, design, view, options) {
   return new Promise(function(resolve, reject) {
     cloudantDb.view(design,view, options, function(err, data, rh) {
@@ -256,5 +284,21 @@ function get_view(cloudantDb, design, view, options) {
   });
 }
 
+function destroy(cloudantDb, id, rev) {
+  return new Promise(function(resolve, reject) {
+    cloudantDb.destroy(id, rev, function(err, data) {
+      if (!err) {
+        // console.log("success retrieving score for ", id);
+        resolve(data);
+      } else {
+        console.log("error", err);
+        return reject(err);
+      }
+    })
+  })
+  .catch(function(err) {
+    Promise.reject(err);
+  });
+}
 
 module.exports = ScoreBook;

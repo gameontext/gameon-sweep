@@ -26,7 +26,7 @@ function verifyScore(result, total) {
 
 describe('totalScore', function() {
   let params = {};
-  params.site = {};
+  params.site = { info: { name: 'test '} };
 
   it('should return 0 for empty result', function() {
     let evaluator = new SiteEvaluator(params);

@@ -169,12 +169,12 @@ describe('checkDescription', function() {
     });
   });
 
-    it('should remember path when coordinates are present', function() {
-      params.site = jsonBody.slim();
+  it('should remember path when coordinates are present', function() {
+    params.site = jsonBody.slim();
 
-      let evaluator = new SiteEvaluator(params);
-      return evaluator.checkDescription().then(function(result) {
-        should.exist(result.path);
-      });
+    let evaluator = new SiteEvaluator(params);
+    return evaluator.checkDescription().then(function(result) {
+      should.exist(result.path);
     });
+  });
 });

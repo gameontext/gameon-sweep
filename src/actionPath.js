@@ -34,12 +34,13 @@ function updatePath(params) {
 
   let cloudant = Cloudant({url: cloudant_url});
   let cloudant_db = params.cloudant_db || 'sweep_score';
-  let scorebook = new ScoreBook(cloudant, 'sweep_score');
+  let scorebook = new ScoreBook(cloudant, cloudant_db);
 
   let marker = Date.now();
 
-  return  mapClient.fetchSites().then(function(all_sites) {
+  return mapClient.fetchSites().then(function(all_sites) {
     let promises  = [];
+    let known_ids = {};
 
     for(let i = 0; i < all_sites.length; i++ ) {
       let site = all_sites[i];
@@ -47,7 +48,37 @@ function updatePath(params) {
         let path = Math.abs(site.coord.x) + Math.abs(site.coord.y);
         promises.push(scorebook.updatePath(site._id, path, marker));
       }
+      known_ids[site._id] = 1;
     }
+
+    promises.push(new Promise(function(resolve, reject) {
+      scorebook.getOrphanScores(known_ids)
+      .then(function(orphanScores) {
+        if ( orphanScores.length > 0 ) {
+          console.log("Checking orphan scores");
+          for(let i = 0; i < orphanScores.length; i++ ) {
+            let orphan = orphanScores[i];
+            sites.push(mapClient.fetch(orphan.id).catch(function(err) {
+              if ( err.statusCode == 404 ) {
+                return scorebook.deleteScore(orphan.id);
+              } else {
+                console.log("error fetching orphan ", orphan.id, err);
+                return Promise.reject({ id: orphan.id, error: err});
+              }
+            }));
+          }
+          Promise.all(sites).then(function(results) {
+            resolve({
+              count: sites.length,
+              results: results
+            })
+          });
+        }
+      })
+      .catch(function(err) {
+        return reject({error: err});
+      });
+    }));
 
     return Promise.all(promises).then(function(results) {
       return {
