@@ -51,7 +51,13 @@ function updatePath(params) {
       known_ids[site._id] = 1;
     }
 
-    promises.push(new Promise(function(resolve, reject) {
+    return Promise.all(promises).then(function(results) {
+      return {
+        marker: marker,
+        count: promises.length,
+        results: results
+      };
+    }).then(new Promise(function(resolve, reject) {
       scorebook.getOrphanScores(known_ids)
       .then(function(orphanScores) {
         if ( orphanScores.length > 0 ) {
@@ -79,14 +85,6 @@ function updatePath(params) {
         return reject({error: err});
       });
     }));
-
-    return Promise.all(promises).then(function(results) {
-      return {
-        marker: marker,
-        count: promises.length,
-        results: results
-      };
-    });
   })
   .catch(function(err) {
     return Promise.reject({error: err});

@@ -175,15 +175,15 @@ class ScoreBook {
 
   getOrphanScores(known_ids) {
     let cloudantDb = this.cloudant.use(this.dbName);
-    console.log("Clear deleted sites, but definitely not these: ", Object.keys(known_ids).length);
+    // console.log("Clear deleted sites, but definitely not these: ", Object.keys(known_ids).length);
 
     return get_view(cloudantDb, 'scores', 'all_scores', {})
     .then(function(all_scores) {
-      console.log("Comparing sites against known scores: ", all_scores.rows.length);
+      // console.log("Comparing sites against known scores: ", all_scores.rows.length);
 
       // Filter out any score that matches a site/room we know exists
       let scores = all_scores.rows.filter( elem => !known_ids[elem.id]);
-      console.log('Filtered to: ', scores.length);
+      console.log('Orphan scores: ', scores.length);
 
       return Promise.resolve(scores);
     })
