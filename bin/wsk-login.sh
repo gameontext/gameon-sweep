@@ -10,12 +10,12 @@ if [ -f ${ROOT}/.wskrc ]; then
 fi
 
 createApiKey() {
-  echo "Checking Bluemix API Key $BLUEMIX_API_KEY"
+  echo "Checking IBM Cloud API Key $BLUEMIX_API_KEY"
   if [ -z "$BLUEMIX_API_KEY" ]; then
     KEY_NAME="${KEY_NAME}-$(hostname)-${LOGNAME}"
     echo
-    echo "Creating an API key: bluemix iam api-key-create ${KEY_NAME}"
-    response=$(bluemix iam api-key-create ${KEY_NAME})
+    echo "Creating an API key: ibmcloud iam api-key-create ${KEY_NAME}"
+    response=$(ibmcloud iam api-key-create ${KEY_NAME})
     rc=$?
     if [ $rc -eq 0 ]; then
       export BLUEMIX_API_KEY=$(echo $response | sed -e 's/.*API Key //')
@@ -31,11 +31,11 @@ createApiKey() {
 }
 
 login() {
-  if bx target >/dev/null 2>/dev/null
+  if ibmcloud target >/dev/null 2>/dev/null
   then
     echo "Already logged in"
   else
-    COMMAND="bx login"
+    COMMAND="ibmcloud login"
     if [ -n "$BLUEMIX_API_HOST" ]; then
       COMMAND="${COMMAND} -a $BLUEMIX_API_HOST"
     fi
@@ -62,7 +62,7 @@ login() {
     rc=$?
     if [ $rc -eq 0 ]; then
       if [ -z "$BLUEMIX_ACCOUNT" ] || [ -z "$BLUEMIX_ORG" ] || [ -z "$BLUEMIX_SPACE" ]; then
-        bx target --cf
+        ibmcloud target --cf
       fi
     else
       return 1

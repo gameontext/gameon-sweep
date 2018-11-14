@@ -18,7 +18,7 @@ if [ ! -f ${ROOT}/.wskrc ]; then
     then
       echo "BLUEMIX_API_HOST=${BLUEMIX_API_HOST}" >> ${ROOT}/.wskrc
 
-      TARGET=$(bx target)
+      TARGET=$(ibmcloud target)
       BLUEMIX_EMAIL=$(echo $TARGET | cut -d ':' -f6 | awk '{print $1}')
       BLUEMIX_ACCOUNT=$(echo $TARGET | cut -d '(' -f3 | cut -d ')' -f1)
       BLUEMIX_ORG=$(echo $TARGET | cut -d ':' -f8 | awk '{print $1}')
@@ -33,10 +33,10 @@ else
 fi
 
 echo "Testing whisk action:
-bx wsk action invoke /whisk.system/utils/echo -p message hello --blocking --result
+ibmcloud wsk action invoke /whisk.system/utils/echo -p message hello --blocking --result
 
 Response: "
-bx wsk action invoke /whisk.system/utils/echo -p message hello --blocking --result
+ibmcloud wsk action invoke /whisk.system/utils/echo -p message hello --blocking --result
 rc=$?
 if [ $rc -eq 0 ]; then
   echo "All is well!"
