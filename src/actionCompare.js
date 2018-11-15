@@ -16,7 +16,7 @@
 const SweepActions = require('./SweepActions.js');
 
 function invoke (params) {
-  return new SweepActions(params).evaluate()
+  return new SweepActions(params).compare()
   .then((result) => {
     return { payload: result };
   });

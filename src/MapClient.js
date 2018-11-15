@@ -16,114 +16,7 @@
 const Promise = require("bluebird");
 const crypto = require('crypto');
 const rp = require('request-promise');
-
-class MapClient {
-  /*
-   * Create a class for keeping scores
-   * Cloudant constructed elsewhere
-   */
-  constructor(map_url, sweepId, sweepSecret) {
-    this.map_url = map_url;
-    this.sweepId = sweepId;
-    this.sweepSecret = sweepSecret;
-  }
-
-  fetchSites() {
-    let options = {
-      uri: this.map_url,
-      json: true,
-    };
-
-    signRequest(options, this.sweepId, this.sweepSecret);
-
-    // Fetch the site description from the Map
-    return rp(options)
-    .catch(function(err) {
-      console.log("Request error: " + err);
-      if ( err.response ) {
-        return Promise.reject({
-          statusCode: err.response.statusCode,
-          statusMessage: err.response.statusMessage
-        });
-      } else {
-        return Promise.reject(err);
-      }
-    });
-  }
-
-  fetch(id) {
-    return this.fetchSite({ _id: id });
-  }
-
-  /*
-   * Fetch Room/Site information from the map service
-   */
-  fetchSite(site) {
-    if ( site.info && site.info.connectionDetails ) {
-      return Promise.resolve(site);
-    }
-
-    let options = {
-      uri: this.map_url + site._id,
-      json: true,
-    };
-    signRequest(options, this.sweepId, this.sweepSecret);
-
-    // Fetch the site description from the Map
-    return rp(options)
-    .catch(function(err) {
-      console.log("Request error: " + err);
-      if ( err.response ) {
-        return Promise.reject({
-          statusCode: err.response.statusCode,
-          statusMessage: err.response.statusMessage,
-          error: err
-        });
-      } else {
-        return Promise.reject(err);
-      }
-    });
-  }
-
-  // For manual operations -- push score otherwise
-  swap_sites(site_1, site_2) {
-    let options = {
-      uri: this.map_url,
-      json: false,
-      method: 'PUT',
-      body: JSON.stringify({
-        site1 : {
-          id: site_1._id,
-          coord:  site_1.coord
-        },
-        site2: {
-          id: site_2._id,
-          coord:  site_2.coord
-        }
-      })
-    };
-
-    signRequest(options, this.sweepId, this.sweepSecret);
-
-    return rp.put(options)
-    .then(function(result) {
-      console.log(`Sites swapped: ${result}`);
-      return result;
-    })
-    .catch(function(err) {
-      console.log("Swap Site request error:", err);
-      if ( err.response ) {
-        return Promise.reject({
-          statusCode: err.response.statusCode,
-          statusMessage: err.response.statusMessage,
-          err: err
-        });
-      } else {
-        return Promise.reject(err);
-      }
-    });
-  }
-}
+const assert = require('assert');
 
 function signRequest(options, sweepId, sweepSecret) {
   options.headers = {
@@ -163,6 +56,94 @@ function signRequest(options, sweepId, sweepSecret) {
   }
 
   return options;
+}
+
+function handleError(error) {
+  console.log("Request error: " + error);
+  if ( error.response ) {
+    return Promise.reject({
+      statusCode: error.response.statusCode,
+      statusMessage: error.response.statusMessage,
+      error: JSON.stringify(error)
+    });
+  } else {
+    return Promise.reject(error);
+  }
+}
+
+class MapClient {
+  constructor(params) {
+    params = params || {};
+
+    let base = params.base || process.env.MAP_URL || 'https://gameontext.org/map/v1/';
+    this.base = base.replace(/\/?$/, '/');
+
+    this.sites_url = base + 'sites/';
+    this.swap_url = base + 'swapSites';
+
+    this.sweepId = params.sweep_id || process.env.SWEEP_ID;
+    assert.ok(this.sweepId, 'Please provide the sweep_id');
+
+    this.sweepSecret = params.sweep_secret || process.env.SWEEP_SECRET;
+    assert.ok(this.sweepSecret, 'Please provide the sweep_secret');
+  }
+
+  fetchSites() {
+    let options = {
+      uri: this.sites_url,
+      json: true,
+    };
+    signRequest(options, this.sweepId, this.sweepSecret);
+
+    // Fetch the site description from the Map
+    return rp(options)
+    .catch((error) => { return handleError(error); });
+  }
+
+  fetch(id) {
+    return this.fetchSite({ _id: id });
+  }
+
+  /*
+   * Fetch Room/Site information from the map service
+   */
+  fetchSite(site) {
+    if ( site.info && site.info.connectionDetails ) {
+      return Promise.resolve(site);
+    }
+
+    let options = {
+      uri: this.sites_url + site._id,
+      json: true,
+    };
+    signRequest(options, this.sweepId, this.sweepSecret);
+
+    // Fetch the site description from the Map
+    return rp(options)
+    .catch((error) => { return handleError(error); });
+  }
+
+  swap_sites(site_1, site_2) {
+    let options = {
+      uri: this.swap_url,
+      json: false,
+      method: 'PUT',
+      body: JSON.stringify({
+        site1 : {
+          id: site_1._id,
+          coord:  site_1.coord
+        },
+        site2: {
+          id: site_2._id,
+          coord:  site_2.coord
+        }
+      })
+    };
+    signRequest(options, this.sweepId, this.sweepSecret);
+
+    return rp.put(options)
+    .catch((error) => { return handleError(error); });
+  }
 }
 
 module.exports = MapClient;

@@ -15,13 +15,39 @@
  *******************************************************************************/
 const assert = require('assert');
 const rp = require('request-promise');
-const Promise = require("bluebird");
+
+function offItGoes(body, uri, env) {
+  if ( env !== 'production' ) {
+    console.log(`*****\n** ${body.icon_emoji} ${body.username}\n** ${body.channel}: ${body.text}\n****`);
+    return Promise.resolve({ status: 'notify-fake'});
+  } else {
+    let options = {
+      uri: uri,
+      json: true,
+      method: 'post',
+      body: body
+    };
+    return rp(options)
+    .then(Promise.resolve({ status: 'notify-ok'}))
+    .catch((error) => {
+      console.log("slack notification error: " + error);
+      return Promise.resolve({
+        status: 'notify-error',
+        error: JSON.stringify(error)
+      });
+    });
+  }
+}
 
 class SlackNotification {
 
-  constructor(slack_url) {
-    assert.ok(slack_url, 'Please provide a slack webhook (slack_url)');
-    this.slack_url = slack_url;
+  constructor(params) {
+    params = params || {};
+
+    this.env = params.NODE_ENV || process.env.NODE_ENV;
+    this.slack_url = params.slack_url || process.env.SLACK_URL;
+    assert.ok(this.slack_url, 'Please provide a slack webhook (slack_url)');
+
     this.channel = '#sweep';
   }
 
@@ -33,8 +59,31 @@ class SlackNotification {
       text: 'Off to do the rounds...'
     };
 
-    return offItGoes(body, this.slack_url);
+    return offItGoes(body, this.slack_url, this.env);
   }
+
+  scoreEnd(count) {
+    let body = {
+      username: 'Evaluator',
+      icon_emoji: ':sleuth_or_spy:',
+      channel: this.channel,
+      text: `Tallied scores for ${count} rooms`
+    };
+
+    return offItGoes(body, this.slack_url, this.env);
+  }
+
+  scoreSad() {
+    let body = {
+      username: 'Evaluator',
+      icon_emoji: ':sleuth_or_spy:',
+      channel: this.channel,
+      text: `Something didn't go quite right with the scorekeeping. Help?`
+    };
+
+    return offItGoes(body, this.slack_url, this.env);
+  }
+
 
   swapStart(number) {
     let body = {
@@ -43,7 +92,7 @@ class SlackNotification {
       channel: this.channel,
       text: 'Sorting through ' + number + ' records'
     };
-    return offItGoes(body, this.slack_url);
+    return offItGoes(body, this.slack_url, this.env);
   }
 
   swapStats(text) {
@@ -53,7 +102,7 @@ class SlackNotification {
       channel: this.channel,
       text: text
     };
-    return offItGoes(body, this.slack_url);
+    return offItGoes(body, this.slack_url, this.env);
   }
 
   swap(text) {
@@ -63,18 +112,28 @@ class SlackNotification {
       channel: this.channel,
       text: text
     };
-    return offItGoes(body, this.slack_url);
+    return offItGoes(body, this.slack_url, this.env);
   }
-}
 
-function offItGoes(body, uri) {
-  let options = {
-    uri: uri,
-    json: true,
-    method: 'post',
-    body: body
-  };
-  return rp(options);
+  swapFail(text) {
+    let body = {
+      username: 'Permutare',
+      icon_emoji: ':fire:',
+      channel: this.channel,
+      text: text
+    };
+    return offItGoes(body, this.slack_url, this.env);
+  }
+
+  hole(a, b) {
+    let body = {
+      username: 'Permutare',
+      icon_emoji: ':see_no_evil:',
+      channel: this.channel,
+      text: `There is a hole in the map near [${a.x},${a.y}] and [${b.x},${b.y}]`
+    };
+    return offItGoes(body, this.slack_url, this.env);
+  }
 }
 
 module.exports = SlackNotification;

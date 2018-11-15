@@ -13,13 +13,15 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
-const SweepActions = require('./SweepActions.js');
+const SweepActions = require('./src/SweepActions.js');
+const util = require('util');
+const fs = require('fs');
 
-function invoke (params) {
-  return new SweepActions(params).evaluate()
-  .then((result) => {
-    return { payload: result };
-  });
-}
+debug = true;
 
-exports.main = invoke;
+new SweepActions().traverse().filter((x) => {
+  let filter = ! ( debug );
+  return filter ? (x.status && x.status.indexOf('ok') < 0) : true;
+}).then((result) => {
+  fs.writeFileSync('./result.manualTraverse.json', JSON.stringify(result, null, 2));
+});

@@ -13,36 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
+const Promise = require("bluebird");
 const assert = require('assert');
 const rp = require('request-promise');
-const Promise = require("bluebird");
-const RoomClient = require('./RoomClient.js')
-const MapClient = require('./MapClient.js');
-
-// Shim around Object.values as this is node6
-var values = require('object.values');
-if (!Object.values) {
-  values.shim();
-}
+const util = require('util');
+const RoomClient = require('./RoomClient.js');
 
 class SiteEvaluator {
   /*
    * Create a class for parsing site/room data.
    */
   constructor(params) {
-    assert.ok(params.site, 'Please provide a site to evaluate');
-    params.score = params.score || {};
+    this.params = params || {};
+    assert.ok(this.params.site, 'Please provide a site to evaluate');
 
-    this.params = params;
+    this.params.score = params.score || {};
     this.interval = params.interval || 1000; // 1s;
+  }
+
+  evaluate() {
+    return Promise.all([this.checkDescription(), this.checkEndpoint(), this.checkRepository()])
+    .then(() => { return this.totalScore(); })
+    .tap((data) => { console.log(util.inspect(data, { maxArrayLength: null, depth: null})); });
   }
 
   checkDescription() {
     let site = this.params.site;
 
     this.params.progress = 'desc';
-    this.params.score.info = {};
-    let score = this.params.score.info;
+    let score = this.params.score.info = {};
     score.total = 0;
 
     if ( site.coord ) {
@@ -93,22 +92,21 @@ class SiteEvaluator {
       }
     }
 
-    return Promise.resolve(this.params);
+    return Promise.resolve(score);
   }
 
   checkRepository() {
-    let self = this;
-    let site = this.params.site;
-
     this.params.progress = 'repo';
     this.params.score.repository = {};
+
+    let site = this.params.site;
     let score = this.params.score.repository;
     score.total = 0;
 
     if ( !site.info || !site.info.repositoryUrl ) {
       score.empty = true;
       // no URL to check. All done.
-      return Promise.resolve(this.params);
+      return Promise.resolve(score);
     }
 
     let url = score.checked = site.info.repositoryUrl;
@@ -117,7 +115,7 @@ class SiteEvaluator {
     // Test the URL itself (empty / valid)
     score.empty = ( url.length === 0 );
     if ( score.empty ) {
-      return Promise.resolve(this.params);
+      return Promise.resolve(score);
     } else {
       // Only http or https, no query string or spaces
       score.valid = /^(http|https):\/\/[^ "?]+$/.test(url);
@@ -132,7 +130,7 @@ class SiteEvaluator {
     score.gameontext = url.startsWith('https://github.com/gameontext/') ||
                         url.startsWith('https://gameontext.org');
     if ( score.gameontext && site.owner !== "game-on.org" ) {
-      return Promise.resolve(this.params);  // skip our own repositories
+      return Promise.resolve(score);  // skip our own repositories
     } else {
       score.total += 2;    // It is not a Game On! URL (or we own it) -- 4
     }
@@ -145,7 +143,7 @@ class SiteEvaluator {
 
     // Fetch the page (retry on 503)
     return retry(options, score.get, this.interval)
-    .then(function (body) {
+    .then((body) => {
       score.get = 'OK';
       score.total += 6;    // It is not a Game On! URL -- 10
 
@@ -177,12 +175,12 @@ class SiteEvaluator {
       }
 
       // Resolve the promise w/ the result
-      return Promise.resolve(self.params);
+      return Promise.resolve(score);
     })
-    .catch(function(err) {
+    .catch((err) => {
       score.get.failed = true;
       if ( !err.response ) {
-        score.get.error = err;
+        score.get.error = handleError(err);
       } else {
         // No extra points, but include the error indicator for site issue
         score.get.statusCode = err.response.statusCode;
@@ -190,7 +188,7 @@ class SiteEvaluator {
       }
 
       // Still a net positive! Resolve the promise, rather than rejecting
-      return Promise.resolve(self.params);
+      return Promise.resolve(score);
     });
   }
 
@@ -224,9 +222,7 @@ class SiteEvaluator {
     if ( !!connectionDetails.healthUrl ) {
       // If a health endpoint is specified, check that first, service may need to wake up!
       return self.checkHealthEndpoint(connectionDetails, score)
-      .then(function() {
-        return self.checkWebSocket(connectionDetails, score)
-      });
+      .then(() => self.checkWebSocket(connectionDetails, score));
     } else {
       // no points, indicate that it wasn't here to test
       score.health = {
@@ -267,7 +263,7 @@ class SiteEvaluator {
       .catch(function(err) {
         score.health.failed = true;
         if ( !err.response ) {
-          score.health.error = err;
+          score.health.error = handleError(err);
         } else {
           score.health.statusCode = err.response.statusCode;
           score.health.statusMessage = err.response.statusMessage;
@@ -337,14 +333,20 @@ class SiteEvaluator {
     results.path = this.params.path;
     results.type = this.params.site.type;
 
-    let name = this.params.site._id;
-    if ( this.params.site.info )
-      name = this.params.site.info.name;
+    const name = this.params.site.info ? this.params.site.info.name : results._id;
 
     console.log(`RACK THEM UP! ${name} has earned ${total} points`);
     return results;
   }
 };
+
+function handleError(error) {
+  console.log("Request error: " + error);
+  if ( error.message ) {
+    return error.message;
+  }
+  return error;
+}
 
 function retry(options, get, interval) {
   get.attempts = 1;
@@ -353,15 +355,15 @@ function retry(options, get, interval) {
   function try_once() {
     return rp(options)
     .catch(function(err) {
-      if ( 503 === err.response.statusCode && get.attempts < 3 ) {
-        get.attempts++;
-        // console.log("INCREMENT " + get.attempts);
-        return Promise.delay(interval).then(try_once);
-      } else {
+      if ( ! err.response ) {
         return Promise.reject(err);
+      } else if ( err.response.statusCode === 503 && get.attempts < 3 ) {
+        get.attempts++;
+        return Promise.delay(interval).then(try_once);
       }
     });
-  };
+  }
+
   return try_once();
 }
 

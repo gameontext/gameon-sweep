@@ -13,82 +13,130 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
-const assert = require('assert');
 const Promise = require('bluebird');
+const assert = require('assert');
+const nano = require('nano');
 
 class ScoreBook {
-  /*
-   * Create a class for keeping scores
-   * Cloudant constructed elsewhere
-   */
-  constructor(cloudant, dbName) {
-    assert.ok(cloudant, 'Please provide Cloudant instance');
-    assert.ok(dbName, 'Cloudant DB must be specified');
-    this.cloudant = cloudant;
-    this.dbName = dbName;
+  constructor(params) {
+    params = params || {};
+
+    this.env = params.NODE_ENV || process.env.NODE_ENV;
+
+    const cloudant_url = params.cloudant_url || process.env.CLOUDANT_URL;
+    assert.ok(cloudant_url, 'Please provide the cloudant_url');
+
+    const dbName = params.cloudant_db || 'sweep_score';
+
+    const opts = {
+      url: cloudant_url,
+      parseUrl: false
+    };
+
+    if ( this.env === 'unittest' ) {
+      this.scoreDb = params.scoreDb;
+    } else {
+      if ( this.env !== 'production') {
+        opts['requestDefaults'] = {
+          strictSSL: false
+        };
+      }
+
+      this.scoreDb = nano(opts).use(dbName);
+    }
   }
 
-  keepScore(score) {
-    if (!score || typeof score !== 'object' ) {
-      return Promise.reject('score object is required.');
-    }
-
-    let site_id = score._id;
-    let cloudantDb = this.cloudant.use(this.dbName);
+  keepScore(score, marker) {
+    assert.ok(typeof score === 'object', 'Score must be an object');
+    assert.ok(score._id, 'Score must have an id');
 
     score.recorded = new Date().toISOString();
 
     // find a previous score for this document
-    return getRevision(cloudantDb, site_id)
-    .then(function(revision) {
+    return getRevision(this.scoreDb, score._id)
+    .then((revision) => {
+      let status = 'score-ok';
       if ( revision ) {
-        // console.log(`${site_id} score revision is ${revision}`);
         score._rev = revision;
       } else {
-        // console.log(`New score for ${site_id}`);
+        status = 'score-new';
       }
 
-      // Store the new result as a new revision
-      // console.log(score)
-      return insert(cloudantDb, score)
-      .then(function() { return score; });
+      // return  inserted score
+      return this.scoreDb.insert(score)
+      .then(() => Promise.resolve({
+        marker: marker,
+        id: score._id,
+        status: status,
+        total: score.total
+      }));
     })
-    .catch(function(err) {
-      // console.log("error for ", site_id, " is ", err);
-      Promise.reject(err);
-    });
-  }
-
-  getScore(id) {
-    let cloudantDb = this.cloudant.use(this.dbName);
-    return get(cloudantDb, id);
-  }
-
-  updatePath(id, path, marker) {
-    let cloudantDb = this.cloudant.use(this.dbName);
-    return get(cloudantDb, id)
-    .then(function(score) {
-      if ( score.path && score.path !== path ) {
-        console.log(`site ${id} has path ${path}`);
-        score.path = path;
-        score.marker = marker;
-        return insert(cloudantDb, score);
+    .catch((error) => {
+      if ( error.statusCode === 404 ) {
+        return Promise.resolve({
+          marker: marker,
+          id: score._id,
+          status: 'path-deleted'
+        });
       } else {
         return Promise.resolve({
-          id: id,
-          path: path,
-          score: score.path,
-          status: "ok"
+          marker: marker,
+          id: score._id,
+          status: 'score-error',
+          error: JSON.stringify(error)
         });
       }
     });
   }
 
-  getScores() {
-    console.log("Fetch all scores");
-    let cloudantDb = this.cloudant.use(this.dbName);
-    return get_view(cloudantDb, 'scores', 'all_scores', {
+  getScore(id) {
+    return this.scoreDb.get(id);
+  }
+
+  updatePath(id, path, marker) {
+    return this.scoreDb.get(id)
+    .then((score) => {
+      if ( score.path !== path ) {
+        console.log(`site ${id} has path ${score.path}, should have ${path}`);
+        score.path = path;
+        score.marker = marker;
+        return this.scoreDb.insert(score)
+        .then(() => Promise.resolve({
+          marker: marker,
+          id: id,
+          status: 'path-update'
+        }));
+      } else {
+        return Promise.resolve({
+          marker: marker,
+          id: id,
+          status: 'path-ok'
+        });
+      }
+    })
+    .catch((error) => {
+      if ( error.statusCode === 404 ) {
+        return Promise.resolve({
+          marker: marker,
+          id: id,
+          status: 'path-deleted'
+        });
+      } else {
+        return Promise.resolve({
+          marker: marker,
+          id: id,
+          status: 'path-error',
+          error: JSON.stringify(error)
+        });
+      }
     });
+
+
+
+  }
+
+  getScores() {
+    return this.scoreDb.view('scores', 'all_scores');
   }
 
   /*
@@ -178,130 +226,29 @@ class ScoreBook {
   }
 
   getOrphanScores(known_ids) {
-    let cloudantDb = this.cloudant.use(this.dbName);
-    // console.log("Clear deleted sites, but definitely not these: ", Object.keys(known_ids).length);
-
-    return get_view(cloudantDb, 'scores', 'all_scores', {})
+    return this.scoreDb.view('scores', 'all_scores')
     .then(function(all_scores) {
-      // console.log("Comparing sites against known scores: ", all_scores.rows.length);
-
       // Filter out any score that matches a site/room we know exists
-      let scores = all_scores.rows.filter( elem => !known_ids[elem.id]);
-      console.log('Orphan scores: ', scores.length);
-
-      return Promise.resolve(scores);
+      let orphans = all_scores.rows.filter( elem => !known_ids[elem.id]);
+      return Promise.resolve(orphans);
     })
-    .catch(function(err) {
-      console.log("error: ", err)
-    });
   }
 
   deleteScore(id) {
-    let cloudantDb = this.cloudant.use(this.dbName);
     // find a previous score for this document
-    return getRevision(cloudantDb, id)
-    .then(function(revision) {
-      return destroy(cloudantDb, id, revision);
+    return getRevision(this.scoreDb, id)
+    .then((revision) => {
+      return this.scoreDb.destroy(id, revision);
     });
   }
 }
 
-/**
- * Create document in database.
- */
-function insert(cloudantDb, score) {
-  return new Promise(function(resolve, reject) {
-    // console.log("insert: " + score);
-    cloudantDb.insert(score, function(error, response) {
-      if (!error) {
-        // console.log("success", response);
-        resolve(response);
-      } else {
-        console.log("error", error);
-        reject(error);
-      }
-    });
-  })
-  .catch(function(err) {
-    Promise.reject(err);
-  });
-}
-
-function get(cloudantDb, id) {
-  return new Promise(function(resolve, reject) {
-    cloudantDb.get(id, function(err, data) {
-      if (!err) {
-        // console.log("success retrieving score for ", id);
-        resolve(data);
-      } else if ( err.statusCode === 404 ) {
-        // New site, no score. All is well.
-        resolve({
-          _id: id
-        });
-      } else {
-        console.log("error", err);
-        return reject(err);
-      }
-    })
-  })
-  .catch(function(err) {
-    Promise.reject(err);
-  });
-}
-
-function getRevision(cloudantDb, id) {
+function getRevision(scoreDb, id) {
   // head function returns the HTTP Headers containing a minimal amount of information about the
   // specified document. The method supports the same query arguments as the GET /{db}/{docid} method,
   // but only the header information (including document size, and the revision as an ETag), is returned.
-  return new Promise(function(resolve, reject) {
-    cloudantDb.head(id, function(err, data, rh) {
-      if (!err) {
-        resolve(JSON.parse(rh.etag));
-      } else if (err.statusCode === 404) {
-        resolve('');
-      } else {
-        // console.log("error retrieving revision for ", id, err);
-        reject(err);
-      }
-    })
-  })
-  .catch(function(err) {
-    // console.log("error working with cloudant for ", id, err);
-    Promise.reject(err);
-  });
-}
-
-function get_view(cloudantDb, design, view, options) {
-  return new Promise(function(resolve, reject) {
-    cloudantDb.view(design,view, options, function(err, data, rh) {
-      if (!err) {
-        resolve(data);
-      } else {
-        // console.log("error retrieving revision for ", id, err);
-        reject(err);
-      }
-    })
-  })
-  .catch(function(err) {
-    // console.log("error working with cloudant for ", id, err);
-    Promise.reject(err);
-  });
-}
-
-function destroy(cloudantDb, id, rev) {
-  return new Promise(function(resolve, reject) {
-    cloudantDb.destroy(id, rev, function(err, data) {
-      if (!err) {
-        // console.log("success retrieving score for ", id);
-        resolve(data);
-      } else {
-        console.log("error", err);
-        return reject(err);
-      }
-    })
-  })
-  .catch(function(err) {
-    Promise.reject(err);
+  return scoreDb.head(id).then((headers) => {
+    return JSON.parse(headers.etag);
   });
 }
 

@@ -11,6 +11,7 @@ ROOT=$( cd ${BIN}/.. && pwd )
 SRC=${ROOT}/src
 BUILD=${ROOT}/build
 
+. .wskrc
 ${BIN}/wsk-login.sh
 
 mkdir -p ${BUILD}
@@ -24,26 +25,17 @@ npm install --production
 zip -ruq base.zip node_modules
 
 cd ${SRC}
-actions=$(find -name 'action*')
+
+# Get list of actions & triggers
+actions=$(ls action* trigger*)
 
 # Let's add the common modules
-zip -u ${BUILD}/base.zip MapClient.js RoomClient.js ScoreBook.js SiteEvaluator.js SlackNotification.js
+zip -u ${BUILD}/base.zip MapClient.js RoomClient.js ScoreBook.js SiteEvaluator.js SlackNotification.js SweepActions.js
 
 cd ${BUILD}
 
 # Common parameters
-common="-p sweep_id ${SWEEP_ID} -p sweep_secret ${SWEEP_SECRET} -p cloudant_url ${CLOUDANT_URL} -p slack_url ${SLACK_URL}"
-
-# Coordinated timeouts for sequence
-# actionScoreAll
-# | --> actionFetch (parallel / async)
-# |     | --> sweep/evaluate (internal / sequential)
-# |     |     +-> actionDescription (30s == 30000) -- 30000
-# |     |         +-> actionRepository (30s == 30000) -- 60000
-# |     |             +-> actionEndpoint (3 min == 180000) -- 240000
-# |     |                 +-> actionRecord (30s == 30000)  -- 270000
-# |     | <-- promise (timeout  -- 280000)
-# | <-- all promises (timeout -- 300000, max 5 minutes)
+common="-p NODE_ENV production -p sweep_id ${SWEEP_ID} -p sweep_secret ${SWEEP_SECRET} -p cloudant_url ${CLOUDANT_URL} -p slack_url ${SLACK_URL}"
 
 for x in $actions; do
   filename=$(basename $x)
@@ -53,15 +45,8 @@ for x in $actions; do
   cp ${SRC}/${filename} index.js
   zip -u ${name}.zip index.js
 
-  case $name in
-    actionEvaluate)
-      wsk_args="-t 280000"
-    ;;
-    *)
-      wsk_args='-t 300000'
-    ;;
-  esac
-
-  bx wsk action update --kind nodejs:6 ${common} ${wsk_args} sweep/${name} ${name}.zip
+  echo "
+  ibmcloud fn action update --kind nodejs:8 ${common} -t 300000 sweep/${name} ${name}.zip"
+  ibmcloud fn action update --kind nodejs:8 ${common} -t 300000 sweep/${name} ${name}.zip
 done
 rm index.js

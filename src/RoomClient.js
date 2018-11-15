@@ -73,7 +73,7 @@ class RoomClient {
   }
 
   tryRoom(result) {
-    // console.log('tryRoom: ', this.id, this.target, this.token);
+    console.log('tryRoom: ', this.id, this.target, this.token);
     result.progress = 'room';
 
     let client = null;
@@ -86,7 +86,7 @@ class RoomClient {
       client = makeClient(self.target, self);
 
       // this attempt finishes when connection is open, or it times out
-      return self.open_p.timeout(5000) // 5 seconds to connect;
+      return self.open_p.timeout(5000); // 5 seconds to connect;
     })
     .then(function() {
       if ( client.readyState === 1 ) {
@@ -99,6 +99,7 @@ class RoomClient {
             userId: "sweepJane",
             version: version
           });
+
           client.send(msg, {}, function() {
             self.sent.push(msg);
           });
@@ -170,7 +171,7 @@ function makeMessage(prefix, id, content) {
 }
 
 function makeClient(target, promises) {
-  client = new WebSocket(target);
+  let client = new WebSocket(target);
 
   client.on('open', function() {
     promises.open_r(true);
@@ -189,12 +190,15 @@ function makeClient(target, promises) {
   });
 
   client.on('error', function(err) {
-    promises.status.err = err;
+    if ( err.message ) {
+      promises.status.err = err.message;
+    } else {
+      promises.status.err = err;
+    }
   });
 
   client.on('message', function(data) {
     promises.received.push(data);
-    // console.log(data);
     let pos = data.indexOf('{');
     let payload = JSON.parse(data.substring(pos));
 
@@ -297,7 +301,7 @@ function scoreRoom(status, result) {
   score.total *= 2;
 
   // console.log('---> Room Score ', score.total);
-  return Promise.resolve(result);
+  return Promise.resolve(score);
 }
 
 module.exports = RoomClient;

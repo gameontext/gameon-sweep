@@ -5,15 +5,15 @@
   "description": "Check the capabilities of a single Game On! evaluator.",
   "main": "actions/actionScoreAll.js",
   "scripts": {
-    "test": "nyc mocha -C test/test*.js",
-    "testdesc": "mocha -C test/testDescription.js",
-    "testendpoint": "mocha -C test/testEndpoint.js",
-    "testfetch": "mocha -C test/testFetchSite.js",
-    "testrepo": "mocha -C test/testRepository.js",
-    "testroom": "mocha -C test/testRoom.js",
-    "testscore": "mocha -C test/testScore.js",
-    "html": "nyc report --reporter=html",
-    "lcov": "nyc report --reporter=text-lcov"
+    "test": "npx nyc mocha -C test/test*.js",
+    "testdesc": "npx mocha -C test/testDescription.js",
+    "testendpoint": "npx mocha -C test/testEndpoint.js",
+    "testfetch": "npx mocha -C test/testFetchSite.js",
+    "testrepo": "npx mocha -C test/testRepository.js",
+    "testroom": "npx mocha -C test/testRoom.js",
+    "testscore": "npx mocha -C test/testScore.js",
+    "html": "npx nyc report --reporter=html",
+    "lcov": "npx nyc report --reporter=text-lcov"
   },
   "author": "Erin Schnabel <schnabel@us.ibm.com>",
   "repository": "https://github.com/gameontext/gameon-sweep",
@@ -25,16 +25,17 @@
     "express": "^4.15.5",
     "jshint": "^2.9.5",
     "mocha": "^3.5.3",
+    "nyc": "^13.1.0",
     "should": "^13.1.0",
     "webpack": "^3.6.0"
   },
   "dependencies": {
     "bluebird": "^3.5.0",
-    "cloudant": "^1.8.0",
+    "nano": "^7.1.0",
     "object.values": "^1.0.4",
     "openwhisk": "^3.7.0",
     "request": "^2.82.0",
     "request-promise": "^4.2.2",
-    "ws": "^3.2.0"
+    "ws": "^6.1.0"
   }
 }

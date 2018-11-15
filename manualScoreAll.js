@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 IBM Corp.
+ * Copyright (c) 2017 IBM Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -13,13 +13,26 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
-const SweepActions = require('./SweepActions.js');
+const SweepActions = require('./src/SweepActions.js');
+const fs = require('fs');
 
-function invoke (params) {
-  return new SweepActions(params).evaluate()
+if ( process.argv.length >= 3 ) {
+  let id = process.argv[2];
+  // evaluate
+  return new SweepActions().evaluate({ '_id': id })
   .then((result) => {
-    return { payload: result };
+    fs.writeFileSync('./result.manualScoreOne.json', JSON.stringify(result));
+  })
+  .catch((err) => {
+    fs.writeFileSync('./result.manualScoreOne.json', JSON.stringify(err));
+  });
+} else {
+  return new SweepActions({}).scoreAll()
+  .then((result) => {
+    fs.writeFileSync('./result.manualScoreAll.json', JSON.stringify(result));
+  })
+  .catch((err) => {
+    fs.writeFileSync('./result.manualScoreAll.json', JSON.stringify(err));
   });
 }
 
-exports.main = invoke;

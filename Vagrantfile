@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
   #fix 'stdin is not a tty' output.
   config.vm.provision :shell, inline: "(grep -q -E '^mesg n$' /root/.profile && sed -i 's/^mesg n$/tty -s \\&\\& mesg n/g' /root/.profile && echo 'Ignore the previous error about stdin not being a tty. Fixing it now...') || exit 0;"
 
-  # Run as Root -- install git, bx cli, node
+  # Run as Root -- install git, ibmcloud cli, node
   config.vm.provision :shell, :inline => <<-EOT
     apt-get update
     DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
@@ -29,20 +29,17 @@ Vagrant.configure("2") do |config|
       nodejs  \
       zip
 
-    if /usr/local/bin/bx > /dev/null 2>/dev/null
+    if /usr/local/bin/ibmcloud > /dev/null 2>/dev/null
     then
-      echo 'Updating Bluemix CLI'
-      /usr/local/bin/bx update
+      echo 'Updating IBM Cloud CLI'
+      /usr/local/bin/ibmcloud update
     else
-      echo 'Installing Bluemix CLI'
-      sh <(curl -fssSL https://clis.ng.bluemix.net/install/linux 2>/dev/null)
+      echo 'Installing IBM Cloud CLI'
+      curl -sL https://ibm.biz/idt-installer | bash
     fi
-
-    # Global install of istanbul command line
-    npm install -g nyc
   EOT
 
-  # Run as vagrant user (not yet in docker group): bx plugins, profile script
+  # Run as vagrant user (not yet in docker group): ibmcloud plugins, profile script
   config.vm.provision :shell, privileged: false, :inline => <<-EOT
     # don't put global npm modules in /usr/lib
     mkdir ~/.npm-global
@@ -63,39 +60,7 @@ Vagrant.configure("2") do |config|
   # Run as vagrant user: Always start things
   config.vm.provision :shell, privileged: false, run: "always", :inline => <<-EOT
 
-    # Install bx plugins
-    PLUGINS=$(bx plugin list)
-    echo "Installing / Upgrading bluemix dev plugin"
-    if echo $PLUGINS | grep dev
-    then
-      bx plugin update dev -r Bluemix
-    else
-      bx plugin install dev -r Bluemix
-    fi
-
-    echo "Installing / Upgrading bluemix container-service plugin"
-    if echo $PLUGINS | grep container-service
-    then
-      bx plugin update container-service -r Bluemix
-    else
-      bx plugin install container-service -r Bluemix
-    fi
-
-    echo 'Installing / Upgrading Bluemix container-registry plugin'
-    if echo $PLUGINS | grep container-registry
-    then
-      bx plugin update container-registry -r Bluemix
-    else
-      bx plugin install container-registry -r Bluemix
-    fi
-
-    echo 'Installing / Upgrading Bluemix cloud-functions plugin'
-    if echo $PLUGINS | grep cloud-functions
-    then
-      bx plugin update cloud-functions -r Bluemix
-    else
-      bx plugin install cloud-functions -r Bluemix
-    fi
+    bin/update-plugins.sh
 
     echo 'To work on the sweep :'
     echo '> vagrant ssh'
