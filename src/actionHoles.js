@@ -17,8 +17,9 @@ const SweepActions = require('./SweepActions.js');
 
 function invoke (params) {
   return new SweepActions(params).holes()
-  .then((result) => {
-    return { payload: result };
+  .catch((err) => {
+    console.log("error", JSON.stringify(err, null, 2));
+    throw err;
   });
 }
 

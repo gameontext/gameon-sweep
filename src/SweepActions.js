@@ -23,18 +23,6 @@ const ScoreBook = require('./ScoreBook.js');
 const SiteEvaluator = require('./SiteEvaluator.js');
 const SlackNotification = require('./SlackNotification.js');
 
-function spawn(ow, env, action, px, promise) {
-  if ( env === 'production' ) {
-    console.log(`Trigger for ${action}`);
-    return ow.triggers.invoke({
-      name: action,
-      params: px
-    });
-  } else {
-    return promise;
-  }
-}
-
 function action(ow, env, action, px, promise) {
   if ( env === 'production' ) {
     console.log(`Action ${action}`);
@@ -45,6 +33,11 @@ function action(ow, env, action, px, promise) {
   } else {
     return promise;
   }
+}
+
+function parseError(error) {
+  console.log(error);
+  return error.message ? error.message : error;
 }
 
 class SweepActions {
@@ -111,9 +104,13 @@ class SweepActions {
       return Promise.all(action_list);
     })
     .then((result) => { return this.filterResult(result); })
+    .then((result) => Promise.resolve({
+      status: 'scoreall-ok',
+      actions: result
+    })
     .catch((error) => Promise.reject({
       status: 'scoreall-error',
-      error: JSON.stringify(error),
+      error: parseError(error),
       params: this.params
     }));
   }
@@ -128,15 +125,24 @@ class SweepActions {
         marker: this.params.marker
       };
 
-      new SiteEvaluator(score_info).evaluate()
-      .then((results) => { return this.scorebook.keepScore(results, this.params.marker); });
+      return new SiteEvaluator(score_info).evaluate()
+      .then((results) => {
+        console.log(results);
+        return this.scorebook.keepScore(results, this.params.marker);
+      //   .then((result) => {
+      //     console.log(result);
+      //     return result;
+      //   });
+      //  return Promise.resolve(results);
+      });
     })
     .catch((err) => {
-      return Promise.reject({
+      return {
         status: 'evaluate-error',
         _id: site_info._id,
         marker: this.params.marker,
-        error: JSON.stringify(err)});
+        error: parseError(err)
+      };
     });
   }
 
@@ -161,7 +167,6 @@ class SweepActions {
           a: stats.swaps[i][0],
           b: stats.swaps[i][1]
         };
-        //action_list.push(spawn(this.ow, this.env, '/Microservices_dev/compareSites', px, this.compare(px.compare.a, px.compare.b)));
         action_list.push(action(this.ow, this.env, 'sweep/actionCompare', px, this.compare(px.compare.a, px.compare.b)));
       }
 
@@ -172,7 +177,7 @@ class SweepActions {
     .then((result) => { return this.filterResult(result); })
     .catch((error) => Promise.reject({
       status: 'compareall-error',
-      error: JSON.stringify(error),
+      error: parseError(error),
       params: this.params
     }));
   }
@@ -224,7 +229,7 @@ class SweepActions {
         marker: this.params.marker,
         a: a.id,
         b: b.id,
-        error: JSON.stringify(error)
+        error: parseError(error)
       };
 
       if ( error.statusCode && error.statusCode === 404 ) {
@@ -262,16 +267,20 @@ class SweepActions {
       // invoke action: clean up orphans
       px = JSON.parse(JSON.stringify(this.params)); // copy / prevent mutation
       px.known_ids = known_ids;
-      action_list.push(spawn(this.ow, this.env, 'sweep/actionOrphans', px, this.orphans(known_ids)));
+      action_list.push(action(this.ow, this.env, 'sweep/actionOrphans', px, this.orphans(known_ids)));
 
       // Note how many actions
       action_list.unshift(Promise.resolve({status: `${action_list.length} actions`}));
       return Promise.all(action_list);
     })
     .then((result) => { return this.filterResult(result); })
+    .then((result) => Promise.resolve({
+      status: 'holes-ok',
+      actions: result
+    })
     .catch((error) => Promise.reject({
       status: 'traverse-error',
-      error: JSON.stringify(error),
+      error: parseError(error),
       params: this.params
     }));
   }
@@ -294,16 +303,20 @@ class SweepActions {
           }))
           .catch((error) => Promise.resolve({
             id: orphans[i].id,
-            error: JSON.stringify(error)
+            error: parseError(error)
           }))
         );
       }
 
-      return Promise.all(action_list);
+      return Promise.all(action_list)
+      .then(() => Promise.resolve({
+        status: 'orphans-ok',
+        results: action_list
+      }));
     })
     .catch((error) => Promise.reject({
       status: 'orphans-error',
-      error: JSON.stringify(error),
+      error: parseError(error),
       params: this.params
     }));
   }
@@ -345,7 +358,11 @@ class SweepActions {
       prev = i;
     });
 
-    return Promise.all(action_list);
+    return Promise.all(action_list)
+    .then(() => Promise.resolve({
+      status: 'holes-ok',
+      holes: action_list.length
+    }));
   }
 
   filterResult(result) {

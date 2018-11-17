@@ -1,5 +1,6 @@
 #!/bin/bash
 
+. .wskrc
 if [ -z "$SWEEP_ID" ] || [ -z "$SWEEP_SECRET" ] || [ -z "$CLOUDANT_URL" ] || [ -z ${SLACK_URL} ]; then
   echo "Check environment variables -- some are missing!"
   exit
@@ -11,7 +12,6 @@ ROOT=$( cd ${BIN}/.. && pwd )
 SRC=${ROOT}/src
 BUILD=${ROOT}/build
 
-. .wskrc
 ${BIN}/wsk-login.sh
 
 mkdir -p ${BUILD}

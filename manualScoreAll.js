@@ -21,18 +21,18 @@ if ( process.argv.length >= 3 ) {
   // evaluate
   return new SweepActions().evaluate({ '_id': id })
   .then((result) => {
-    fs.writeFileSync('./result.manualScoreOne.json', JSON.stringify(result));
+    fs.writeFileSync('./result.manualScoreOne.json', JSON.stringify(result, null, 2));
   })
   .catch((err) => {
-    fs.writeFileSync('./result.manualScoreOne.json', JSON.stringify(err));
+    fs.writeFileSync('./result.manualScoreOne.json', JSON.stringify(err, null, 2));
   });
 } else {
   return new SweepActions({}).scoreAll()
   .then((result) => {
-    fs.writeFileSync('./result.manualScoreAll.json', JSON.stringify(result));
+    fs.writeFileSync('./result.manualScoreAll.json', JSON.stringify(result, null, 2));
   })
   .catch((err) => {
-    fs.writeFileSync('./result.manualScoreAll.json', JSON.stringify(err));
+    fs.writeFileSync('./result.manualScoreAll.json', JSON.stringify(err, null, 2));
   });
 }
 

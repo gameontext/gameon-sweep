@@ -32,9 +32,12 @@ class SiteEvaluator {
   }
 
   evaluate() {
-    return Promise.all([this.checkDescription(), this.checkEndpoint(), this.checkRepository()])
-    .then(() => { return this.totalScore(); })
-    .tap((data) => { console.log(util.inspect(data, { maxArrayLength: null, depth: null})); });
+    // return Promise.all([this.checkDescription(), this.checkEndpoint(), this.checkRepository()])
+    // .then(() => { return this.totalScore(); });
+    return this.checkDescription()
+    .then(() => this.checkEndpoint())
+    .then(() => this.checkRepository())
+    .then(() => { return this.totalScore(); });
   }
 
   checkDescription() {
@@ -336,9 +339,9 @@ class SiteEvaluator {
     const name = this.params.site.info ? this.params.site.info.name : results._id;
 
     console.log(`RACK THEM UP! ${name} has earned ${total} points`);
-    return results;
+    return Promise.resolve(results);
   }
-};
+}
 
 function handleError(error) {
   console.log("Request error: " + error);

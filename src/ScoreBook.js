@@ -37,7 +37,7 @@ class ScoreBook {
       this.scoreDb = params.scoreDb;
     } else {
       if ( this.env !== 'production') {
-        opts['requestDefaults'] = {
+        opts.requestDefaults = {
           strictSSL: false
         };
       }
@@ -64,14 +64,18 @@ class ScoreBook {
 
       // return  inserted score
       return this.scoreDb.insert(score)
-      .then(() => Promise.resolve({
-        marker: marker,
-        id: score._id,
-        status: status,
-        total: score.total
-      }));
+      .then(() => {
+        console.log("OK");
+        return Promise.resolve({
+          marker: marker,
+          id: score._id,
+          status: status,
+          total: score.total
+        });
+      })
     })
     .catch((error) => {
+      console.log("ERROR");
       if ( error.statusCode === 404 ) {
         return Promise.resolve({
           marker: marker,
@@ -79,11 +83,11 @@ class ScoreBook {
           status: 'path-deleted'
         });
       } else {
-        return Promise.resolve({
+        return Promise.reject({
           marker: marker,
           id: score._id,
           status: 'score-error',
-          error: JSON.stringify(error)
+          error: parseError(error)
         });
       }
     });
@@ -101,11 +105,13 @@ class ScoreBook {
         score.path = path;
         score.marker = marker;
         return this.scoreDb.insert(score)
-        .then(() => Promise.resolve({
-          marker: marker,
-          id: id,
-          status: 'path-update'
-        }));
+        .then(() => {
+          return Promise.resolve({
+            marker: marker,
+            id: id,
+            status: 'path-update'
+          });
+        });
       } else {
         return Promise.resolve({
           marker: marker,
@@ -122,17 +128,14 @@ class ScoreBook {
           status: 'path-deleted'
         });
       } else {
-        return Promise.resolve({
+        return Promise.reject({
           marker: marker,
           id: id,
           status: 'path-error',
-          error: JSON.stringify(error)
+          error: parseError(error)
         });
       }
     });
-
-
-
   }
 
   getScores() {
@@ -166,11 +169,8 @@ class ScoreBook {
       non_empty: 0
     };
 
-    let i = 0;
-    let j = 0;
-
     // iterate by ascending score..
-    for(i; i < scores.length; i++) {
+    for(let i; i < scores.length; i++) {
       let score1 = scores[i];
 
       // ignore empty rooms when calculating stats
@@ -205,7 +205,7 @@ class ScoreBook {
             break;
           } else if ( !swap_eligible[score2.id] ) {
             continue;
-          } else if ( score1.value == score2.value ) {
+          } else if ( score1.value === score2.value ) {
             //console.log(`SKIP: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
             continue;
           } else if ( score1.value < score2.value ) {
@@ -231,7 +231,7 @@ class ScoreBook {
       // Filter out any score that matches a site/room we know exists
       let orphans = all_scores.rows.filter( elem => !known_ids[elem.id]);
       return Promise.resolve(orphans);
-    })
+    });
   }
 
   deleteScore(id) {
@@ -248,8 +248,13 @@ function getRevision(scoreDb, id) {
   // specified document. The method supports the same query arguments as the GET /{db}/{docid} method,
   // but only the header information (including document size, and the revision as an ETag), is returned.
   return scoreDb.head(id).then((headers) => {
-    return JSON.parse(headers.etag);
+    return Promise.resolve(JSON.parse(headers.etag));
   });
+}
+
+function parseError(error) {
+  console.log(error);
+  return error.message ? error.message : error;
 }
 
 module.exports = ScoreBook;

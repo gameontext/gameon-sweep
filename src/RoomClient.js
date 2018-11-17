@@ -22,6 +22,7 @@ class RoomClient {
 
     this.id = id;
     this.target = target;
+    this.token = token;
     this.status = {};
     this.sent = [];
     this.received = [];
@@ -164,7 +165,7 @@ class RoomClient {
       }
     });
   }
-};
+}
 
 function makeMessage(prefix, id, content) {
   return prefix +',' + id + ',' + JSON.stringify(content);
@@ -231,7 +232,7 @@ function processLocation(client, status, id) {
     let numCommands = keys.length;
     status.commands = numCommands;
 
-    let str = (numCommands == 1 ? '1 custom command' : numCommands + ' custom commands');
+    let str = (numCommands === 1 ? '1 custom command' : numCommands + ' custom commands');
     let yay1 = makeMessage('room',id,{
       "username": "Jane Said",
       "userId": "sweepJane",
@@ -260,7 +261,7 @@ function processLocation(client, status, id) {
     let numItems = payload.roomInventory.length;
     status.items = numItems;
 
-    let str = (numItems == 1 ? '1 items' : numItems + ' items');
+    let str = (numItems === 1 ? '1 items' : numItems + ' items');
     let yay2 = makeMessage('room',id,{
       "username": "Jane Said",
       "userId": "sweepJane",

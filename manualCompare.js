@@ -22,11 +22,11 @@ if ( process.argv.length >= 4 ) {
   let id_2 = process.argv[3];
 
   new SweepActions().compare({id: id_1}, {id: id_2}).then((result) => {
-    fs.writeFileSync('./result.manualCompareOne.json', JSON.stringify(result));
+    fs.writeFileSync('./result.manualCompareOne.json', JSON.stringify(result, null, 2));
   });
 } else {
   new SweepActions().compareAll().then((result) => {
-    fs.writeFileSync('./result.manualCompareAll.json', JSON.stringify(result));
+    fs.writeFileSync('./result.manualCompareAll.json', JSON.stringify(result, null, 2));
   });
 }
 
