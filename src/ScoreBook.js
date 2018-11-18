@@ -137,7 +137,13 @@ class ScoreBook {
   }
 
   getScores() {
-    return this.scoreDb.view('scores', 'all_scores');
+    return this.scoreDb.view('scores', 'all_scores')
+    .then((view) => { return view.rows; });
+  }
+
+  getPaths(){
+    return this.scoreDb.view('scores', 'by_path')
+    .then((view) => { return view.rows; });
   }
 
   /*
@@ -146,10 +152,11 @@ class ScoreBook {
    * when we're done. We're relying on _many subsequent
    * invocations to eventually get sites sorted-ish.
    */
-  findSiteSwaps(all_scores) {
+  findSiteSwaps(all_scores, paths) {
     // Filter out firstRoom and rooms with unassigned/null values
     let scores = all_scores.filter(elem => elem.id !== 'firstroom' );
     // Scores come back: [ { id: id, key: score, value: path }, ... ]
+    // Paths are the opposite [ { id: id, key: path, value: score }, .. ]
 
     // keep track of rooms eligible for swapping
     let swap_eligible = {};
@@ -159,6 +166,7 @@ class ScoreBook {
 
     let result = {
       swaps: [],
+      longest_path: (paths[paths.length - 1].key),
       high: (scores[scores.length - 1].key),
       low: 0,
       median: 0,
@@ -169,16 +177,17 @@ class ScoreBook {
 
     // iterate by ascending score..
     for(let i = 0; i < scores.length; i++) {
-      let score1 = scores[i];
+      let score = scores[i];
+
 
       // ignore empty rooms when calculating stats
-      if ( result.median === 0  && score1.key >= 0 ) {
-        console.log("low score", i, score1);
-        result.low = score1.key; // first non-empty room
-        result.non_empty = scores.length - i +1;
-        console.log("scores.length", scores.length);
+      if ( result.median === 0 && score.key >= 0 ) {
+        console.log("low score", i, score);
         console.log("first non-empty i", i);
+        result.non_empty = scores.length - i +1;
         console.log("number of non-empty rooms", result.non_empty);
+        result.low = score.key; // first non-empty room
+        console.log("scores.length", scores.length);
 
         let median_x = Math.floor(result.non_empty / 2) + i;
         let quart_x = Math.floor(result.non_empty / 4);
@@ -193,29 +202,23 @@ class ScoreBook {
       }
 
       // if this score is still eligible for swapping, then..
-      if ( !!swap_eligible[score1.id] ) {
-        // iterate from high score to low score: favor big jumps
-        for(let j = scores.length - 1; j >= 0; j--) {
-          let score2 = scores[j];
+      if ( !!swap_eligible[score.id] ) {
+        //console.log(`****: [${i}] ${score.key} ${score.value}`);
+        // Iterate by paths: lower paths are closer to the center
+        for(let j = 1; j < paths.length; j++) {
+          let path = paths[j];
 
-          if ( score1.key >= score2.key ) {
-            // done with this. We're now looking at scores smaller than ours.
-            //console.log(`LAST: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
-            break;
-          } else if ( !swap_eligible[score2.id] ) {
+          if ( score.id === path.id || score.value === path.key ) {
             continue;
-          } else if ( score1.value === score2.value ) {
-            //console.log(`SKIP: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
-            continue;
-          } else if ( score1.value < score2.value ) {
-            console.log(`SWAP: [${i}] ${score1.key} ${score1.value} <-- [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
-            // remove scores from eligibility
-            delete swap_eligible[score1.id];
-            delete swap_eligible[score2.id];
-            result.swaps.push([score1, score2]);
-            break;
-          } else {
-            //console.log(`????: [${i}] ${score1.key} ${score1.value} --> [${j}] ${score2.key} ${score2.value} -- ${score1.id}, ${score2.id}`);
+          } else if ( !!swap_eligible[path.id] ) {
+            if ( score.value < path.key && score.key < path.value ) {
+              console.log(`SWAP: [${i}] ${score.key}pts ${score.value} <-- ${path.value}pts ${path.key} -- ${score.id}, ${path.id}`);
+              delete swap_eligible[score.id];
+              delete swap_eligible[path.id];
+              result.swaps.push([{id: score.id, path: score.value, score: score.key},
+                                 {id: path.id,  path: path.key,    score: path.value}]);
+              break;
+            }
           }
         }
       }

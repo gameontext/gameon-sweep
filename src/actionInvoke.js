@@ -16,9 +16,12 @@
 const SweepActions = require('./SweepActions.js');
 
 function invoke (params) {
+  params = params || {};
+  params.invoke = params.invoke || 'traverseSwap';
   return new SweepActions(params).invoke()
-  .then((result) => {
-    return { payload: result };
+  .catch((err) => {
+    console.log("error", JSON.stringify(err));
+    throw err;
   });
 }
 

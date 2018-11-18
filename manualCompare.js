@@ -25,7 +25,7 @@ if ( process.argv.length >= 4 ) {
     fs.writeFileSync('./result.manualCompareOne.json', JSON.stringify(result, null, 2));
   });
 } else {
-  new SweepActions().compareAll().then((result) => {
+  new SweepActions({debug: true}).compareAll().then((result) => {
     fs.writeFileSync('./result.manualCompareAll.json', JSON.stringify(result, null, 2));
   });
 }

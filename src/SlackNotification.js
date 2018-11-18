@@ -51,23 +51,12 @@ class SlackNotification {
     this.channel = '#sweep';
   }
 
-  scoreStart() {
+  scoring(count) {
     let body = {
       username: 'Evaluator',
       icon_emoji: ':sleuth_or_spy:',
       channel: this.channel,
-      text: 'Off to do the rounds...'
-    };
-
-    return offItGoes(body, this.slack_url, this.env);
-  }
-
-  scoreEnd(count) {
-    let body = {
-      username: 'Evaluator',
-      icon_emoji: ':sleuth_or_spy:',
-      channel: this.channel,
-      text: `Tallied scores for ${count} rooms`
+      text: `Tallying scores for ${count} rooms`
     };
 
     return offItGoes(body, this.slack_url, this.env);
@@ -108,7 +97,7 @@ class SlackNotification {
   swap(text) {
     let body = {
       username: 'Permutare',
-      icon_emoji: ':revolving_hearts:',
+      icon_emoji: ':dizzy:',
       channel: this.channel,
       text: text
     };

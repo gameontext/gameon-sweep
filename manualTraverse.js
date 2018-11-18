@@ -17,11 +17,7 @@ const SweepActions = require('./src/SweepActions.js');
 const util = require('util');
 const fs = require('fs');
 
-debug = true;
-
-new SweepActions().traverse().filter((x) => {
-  let filter = ! ( debug );
-  return filter ? (x.status && x.status.indexOf('ok') < 0) : true;
-}).then((result) => {
+new SweepActions({debug: true}).traverse().then((result) => {
   fs.writeFileSync('./result.manualTraverse.json', JSON.stringify(result, null, 2));
 });
+
