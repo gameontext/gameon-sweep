@@ -26,6 +26,8 @@ var server;
 describe('checkSite', function() {
   let params = {};
   params.score = {}
+  params.sweep_id = 'sweep';
+  params.sweep_secret = 'secret';
   params.interval = 1;
 
   // Scope server start/stop to within this block
@@ -41,12 +43,13 @@ describe('checkSite', function() {
   });
 
   it('should return an error when fetch fails', function() {
-    app.get('/fail/firstroom', function (req, res) {
+    app.get('/fail/sites/firstroom', function (req, res) {
       res.status(503)        // HTTP status 503: Not Available
          .send('Not Available');
     });
 
-    let mapClient = new MapClient('http://localhost:3000/fail/', '', '');
+    params.base = `http://localhost:${port}/fail/`;
+    let mapClient = new MapClient(params);
 
     return mapClient.fetchSite({ '_id': 'firstroom' })
     .should.be.rejectedWith({ statusCode: 503,
@@ -54,12 +57,13 @@ describe('checkSite', function() {
   });
 
   it('should return an error when the site does not exist', function() {
-    app.get('/fail-not-exist/firstroom', function (req, res) {
+    app.get('/fail-not-exist/sites/firstroom', function (req, res) {
       res.status(404)        // HTTP status 404: No results found
          .send('No results found');
     });
 
-    let mapClient = new MapClient('http://localhost:3000/fail-not-exist/', '', '');
+    params.base = `http://localhost:${port}/fail-not-exist/`;
+    let mapClient = new MapClient(params);
 
     return mapClient.fetchSite({ '_id': 'firstroom' })
       .should.be.rejectedWith({ statusCode: 404,

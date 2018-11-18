@@ -59,12 +59,11 @@ function signRequest(options, sweepId, sweepSecret) {
 }
 
 function handleError(error) {
-  console.log("Request error: " + error);
   if ( error.response ) {
     return Promise.reject({
       statusCode: error.response.statusCode,
       statusMessage: error.response.statusMessage,
-      error: JSON.stringify(error)
+      message: error.message
     });
   } else {
     return Promise.reject(error);
@@ -120,7 +119,7 @@ class MapClient {
 
     // Fetch the site description from the Map
     return rp(options)
-    .catch((error) => { return handleError(error); });
+    .catch(handleError);
   }
 
   swap_sites(site_1, site_2) {
@@ -142,7 +141,7 @@ class MapClient {
     signRequest(options, this.sweepId, this.sweepSecret);
 
     return rp.put(options)
-    .catch((error) => { return handleError(error); });
+    .catch(handleError);
   }
 }
 

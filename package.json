@@ -11,7 +11,7 @@
     "testfetch": "npx mocha -C test/testFetchSite.js",
     "testrepo": "npx mocha -C test/testRepository.js",
     "testroom": "npx mocha -C test/testRoom.js",
-    "testscore": "npx mocha -C test/testScore.js",
+    "testtotal": "npx mocha -C test/testTotalScore.js",
     "html": "npx nyc report --reporter=html",
     "lcov": "npx nyc report --reporter=text-lcov"
   },

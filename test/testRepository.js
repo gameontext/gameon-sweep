@@ -25,21 +25,20 @@ var port = 3000;
 var server;
 
 function verifyResult(result, total) {
-  // console.log(JSON.stringify(result.score));
-  should.exist(result.site);
-  should.exist(result.score.repository);
-  should.exist(result.score.repository.total);
-  should.equal(result.score.repository.total, total, 'Should have the expected number of points');
+  //console.log(result);
+  should.exist(result);
+  should.exist(result.total);
+  should.equal(result.total, total, 'Should have the expected number of points');
 }
 
 function verifyGoodUrl(result, total) {
   verifyResult(result, total);
-  (result.score.repository.empty).should.be.false();
-  (result.score.repository.valid).should.be.true();
-  (result.score.repository.gameontext).should.be.false();
-  should.equal(result.score.repository.get, 'OK', 'Should summarize GET was OK');
-  should.not.exist(result.score.repository.get.statusCode);
-  should.not.exist(result.score.repository.get.statusMessage);
+  (result.empty).should.be.false();
+  (result.valid).should.be.true();
+  (result.gameontext).should.be.false();
+  should.equal(result.get, 'OK', 'Should summarize GET was OK');
+  should.not.exist(result.get.statusCode);
+  should.not.exist(result.get.statusMessage);
 }
 
 describe('checkRepository', function() {
@@ -64,7 +63,7 @@ describe('checkRepository', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.score.repository.empty).should.be.true();
+      (result.empty).should.be.true();
     });
   });
 
@@ -74,7 +73,7 @@ describe('checkRepository', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.score.repository.empty).should.be.true();
+      (result.empty).should.be.true();
     });
   });
 
@@ -84,8 +83,8 @@ describe('checkRepository', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.score.repository.empty).should.be.false();
-      (result.score.repository.valid).should.be.false();
+      (result.empty).should.be.false();
+      (result.valid).should.be.false();
     });
   });
 
@@ -95,8 +94,8 @@ describe('checkRepository', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.score.repository.empty).should.be.false();
-      (result.score.repository.valid).should.be.false();
+      (result.empty).should.be.false();
+      (result.valid).should.be.false();
     });
   });
 
@@ -106,9 +105,9 @@ describe('checkRepository', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
       verifyResult(result, 2); // 2 points
-      (result.score.repository.empty).should.be.false();
-      (result.score.repository.valid).should.be.true();
-      (result.score.repository.gameontext).should.be.true();
+      (result.empty).should.be.false();
+      (result.valid).should.be.true();
+      (result.gameontext).should.be.true();
     });
   });
 
@@ -118,9 +117,9 @@ describe('checkRepository', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
       verifyResult(result, 2); // 2 points
-      (result.score.repository.empty).should.be.false();
-      (result.score.repository.valid).should.be.true();
-      (result.score.repository.gameontext).should.be.true();
+      (result.empty).should.be.false();
+      (result.valid).should.be.true();
+      (result.gameontext).should.be.true();
     });
   });
 
@@ -135,13 +134,13 @@ describe('checkRepository', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
       verifyResult(result, 4); // 4 points
-      (result.score.repository.empty).should.be.false();
-      (result.score.repository.valid).should.be.true();
-      (result.score.repository.gameontext).should.be.false();
-      should.exist(result.score.repository.get);
-      should.exist(result.score.repository.get.statusCode);
-      should.equal(result.score.repository.get.statusCode, 404, 'Expected 404');
-      should.exist(result.score.repository.get.statusMessage);
+      (result.empty).should.be.false();
+      (result.valid).should.be.true();
+      (result.gameontext).should.be.false();
+      should.exist(result.get);
+      should.exist(result.get.statusCode);
+      should.equal(result.get.statusCode, 404, 'Expected 404');
+      should.exist(result.get.statusMessage);
     });
   });
 
@@ -157,18 +156,18 @@ describe('checkRepository', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
       verifyResult(result, 4); // 4 points
-      (result.score.repository.empty).should.be.false();
-      (result.score.repository.valid).should.be.true();
-      (result.score.repository.gameontext).should.be.false();
-      should.exist(result.score.repository.get);
-      should.equal(result.score.repository.get.attempts, 3, 'Should have retried 3 times');
-      should.exist(result.score.repository.get.statusCode);
-      should.equal(result.score.repository.get.statusCode, 503, 'Expected 503');
-      should.exist(result.score.repository.get.statusMessage);
+      (result.empty).should.be.false();
+      (result.valid).should.be.true();
+      (result.gameontext).should.be.false();
+      should.exist(result.get);
+      should.equal(result.get.attempts, 3, 'Should have retried 3 times');
+      should.exist(result.get.statusCode);
+      should.equal(result.get.statusCode, 503, 'Expected 503');
+      should.exist(result.get.statusMessage);
     });
   });
 
-  it('should award points for reachable site -- +6', function() {
+  it('should award points for reachable site -- +10', function() {
     params.site = jsonBody.site_repo('http://localhost:3000/available/');
 
     app.get('/available/', function (req, res) {
@@ -187,9 +186,9 @@ describe('checkRepository', function() {
 
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
-      verifyGoodUrl(result, 30); // 30 points!!
-      (result.score.repository.src).should.be.true(result);
-      (result.score.repository.GO_ref).should.be.false(result);
+      verifyGoodUrl(result, 30); // (10) repo + (20) code
+      (result.src).should.be.true(result);
+      (result.GO_ref).should.be.false(result);
     });
   });
 
@@ -201,9 +200,9 @@ describe('checkRepository', function() {
 
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
-      verifyGoodUrl(result, 30); // 30 points!!
-      (result.score.repository.src).should.be.false(result);
-      (result.score.repository.GO_ref).should.be.true(result);
+      verifyGoodUrl(result, 30); // (10) repo + (20) readme
+      (result.src).should.be.false(result);
+      (result.GO_ref).should.be.true(result);
     });
   });
 
@@ -212,9 +211,9 @@ describe('checkRepository', function() {
 
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkRepository().then(function(result) {
-      verifyGoodUrl(result, 50); // 50 points!!
-      (result.score.repository.src).should.be.true(result);
-      (result.score.repository.GO_ref).should.be.true(result);
+      verifyGoodUrl(result, 50); // (10) repo + (20) readme + (20) src
+      (result.src).should.be.true(result);
+      (result.GO_ref).should.be.true(result);
     });
   });
 

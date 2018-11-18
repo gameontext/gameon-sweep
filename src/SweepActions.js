@@ -107,7 +107,7 @@ class SweepActions {
     .then((result) => Promise.resolve({
       status: 'scoreall-ok',
       actions: result
-    })
+    }))
     .catch((error) => Promise.reject({
       status: 'scoreall-error',
       error: parseError(error),
@@ -127,13 +127,8 @@ class SweepActions {
 
       return new SiteEvaluator(score_info).evaluate()
       .then((results) => {
-        console.log(results);
+        //console.log(results);
         return this.scorebook.keepScore(results, this.params.marker);
-      //   .then((result) => {
-      //     console.log(result);
-      //     return result;
-      //   });
-      //  return Promise.resolve(results);
       });
     })
     .catch((err) => {
@@ -149,8 +144,10 @@ class SweepActions {
   compareAll() {
     return this.scorebook.getScores()
     .then((all_scores) => {
+      console.log(all_scores);
       let action_list = [];
       let stats = this.scorebook.findSiteSwaps(all_scores.rows);
+      console.log(stats);
 
       action_list.push(this.slack.swapStats(
         `All sorted. Out of ${stats.non_empty} rooms: \n`
@@ -175,8 +172,12 @@ class SweepActions {
       return Promise.all(action_list);
     })
     .then((result) => { return this.filterResult(result); })
+    .then((result) => Promise.resolve({
+      status: 'compareAll-ok',
+      actions: result
+    }))
     .catch((error) => Promise.reject({
-      status: 'compareall-error',
+      status: 'compareAll-error',
       error: parseError(error),
       params: this.params
     }));
@@ -275,9 +276,9 @@ class SweepActions {
     })
     .then((result) => { return this.filterResult(result); })
     .then((result) => Promise.resolve({
-      status: 'holes-ok',
+      status: 'traverse-ok',
       actions: result
-    })
+    }))
     .catch((error) => Promise.reject({
       status: 'traverse-error',
       error: parseError(error),

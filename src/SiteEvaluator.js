@@ -24,10 +24,12 @@ class SiteEvaluator {
    * Create a class for parsing site/room data.
    */
   constructor(params) {
-    this.params = params || {};
-    assert.ok(this.params.site, 'Please provide a site to evaluate');
+    params = params || {};
+    assert.ok(params.site, 'Please provide a site to evaluate');
 
-    this.params.score = params.score || {};
+    this.results = {};
+    this.results.site = params.site;
+    this.results.score = params.score || {};
     this.interval = params.interval || 1000; // 1s;
   }
 
@@ -41,14 +43,14 @@ class SiteEvaluator {
   }
 
   checkDescription() {
-    let site = this.params.site;
+    let site = this.results.site;
 
-    this.params.progress = 'desc';
-    let score = this.params.score.info = {};
+    this.results.progress = 'desc';
+    let score = this.results.score.info = {};
     score.total = 0;
 
     if ( site.coord ) {
-      this.params.path = Math.abs(site.coord.x) + Math.abs(site.coord.y);
+      this.results.path = Math.abs(site.coord.x) + Math.abs(site.coord.y);
     }
 
     if ( site.type === 'empty' ) {
@@ -99,11 +101,11 @@ class SiteEvaluator {
   }
 
   checkRepository() {
-    this.params.progress = 'repo';
-    this.params.score.repository = {};
+    this.results.progress = 'repo';
+    this.results.score.repository = {};
 
-    let site = this.params.site;
-    let score = this.params.score.repository;
+    let site = this.results.site;
+    let score = this.results.score.repository;
     score.total = 0;
 
     if ( !site.info || !site.info.repositoryUrl ) {
@@ -125,7 +127,7 @@ class SiteEvaluator {
       if ( score.valid ) {
         score.total += 2; // URL is valid and not-empty -- 2
       } else {
-        return Promise.resolve(this.params);
+        return Promise.resolve(score);
       }
     }
 
@@ -148,29 +150,29 @@ class SiteEvaluator {
     return retry(options, score.get, this.interval)
     .then((body) => {
       score.get = 'OK';
-      score.total += 6;    // It is not a Game On! URL -- 10
+      score.total += 6;    // It is not a Game On! URL -- 10 total
 
       // I give up with regex. This works.
-      let pos1 = body.indexOf('<div class="repository-lang-stats-graph');
-      let pos2 = body.indexOf('</div>', pos1)
+      let pos1 = body.indexOf('<ol class="repository-lang-stats');
+      let pos2 = body.indexOf('</ol>', pos1)
       let languages = body.substring(pos1,pos2);
 
       // Super primitive scraping here. Relying on GitHub not to mess with this much
-      score.src = ( languages.indexOf('itemprop="keywords">Java') >= 0 || // covers JavaScript
-                                languages.indexOf('itemprop="keywords">Go') >= 0 ||
-                                languages.indexOf('itemprop="keywords">Groovy') >= 0 ||
-                                languages.indexOf('itemprop="keywords">PHP') >= 0 ||
-                                languages.indexOf('itemprop="keywords">Prolog') >= 0 ||
-                                languages.indexOf('itemprop="keywords">Python') >= 0 ||
-                                languages.indexOf('itemprop="keywords">Ruby') >= 0 ||
-                                languages.indexOf('itemprop="keywords">Scala') >= 0 ||
-                                languages.indexOf('itemprop="keywords">Swift') >= 0 );
+      score.src = ( languages.indexOf('Java') >= 0 || // covers JavaScript
+                    languages.indexOf('Go') >= 0 ||
+                    languages.indexOf('Groovy') >= 0 ||
+                    languages.indexOf('PHP') >= 0 ||
+                    languages.indexOf('Prolog') >= 0 ||
+                    languages.indexOf('Python') >= 0 ||
+                    languages.indexOf('Ruby') >= 0 ||
+                    languages.indexOf('Scala') >= 0 ||
+                    languages.indexOf('Swift') >= 0 );
 
       score.GO_ref = ( body.indexOf('Game On') >= 0 ||
-                                   body.indexOf('gameontext') >= 0 );
+                       body.indexOf('gameontext') >= 0 );
 
       if ( score.src ) {
-        score.total += 20;    // It contains source -- max 30
+        score.total += 20;    // It contains source -- 30 total
       }
 
       if ( score.GO_ref ) {
@@ -182,12 +184,12 @@ class SiteEvaluator {
     })
     .catch((err) => {
       score.get.failed = true;
-      if ( !err.response ) {
-        score.get.error = handleError(err);
-      } else {
+      if ( err.statusCode ) {
         // No extra points, but include the error indicator for site issue
-        score.get.statusCode = err.response.statusCode;
-        score.get.statusMessage = err.response.statusMessage;
+        score.get.statusCode = err.statusCode;
+        score.get.statusMessage = err.statusMessage;
+      } else {
+        score.get.error = err.message;
       }
 
       // Still a net positive! Resolve the promise, rather than rejecting
@@ -201,17 +203,17 @@ class SiteEvaluator {
    */
   checkEndpoint() {
     let self = this;
-    let site = this.params.site;
+    let site = this.results.site;
 
-    this.params.progress = 'endpoint';
-    this.params.score.endpoint = {};
-    let score = this.params.score.endpoint;
+    this.results.progress = 'endpoint';
+    this.results.score.endpoint = {};
+    let score = this.results.score.endpoint;
     score.total = 0;
 
     if ( !site.info || !site.info.connectionDetails ) {
       score.empty = true;
       // no connectionDetails to check. All done.
-      return Promise.resolve(self.params);
+      return Promise.resolve(score);
     }
 
     let connectionDetails = site.info.connectionDetails;
@@ -219,7 +221,7 @@ class SiteEvaluator {
     // type is a required attribute, if it isn't there, the end.
     score.empty = !(connectionDetails.type && connectionDetails.type.trim().length > 0);
     if ( score.empty ) {
-      return Promise.resolve(self.params);
+      return Promise.resolve(score);
     }
 
     if ( !!connectionDetails.healthUrl ) {
@@ -241,7 +243,7 @@ class SiteEvaluator {
    * Test Health endpoint. Always resolve, never reject
    */
   checkHealthEndpoint(connectionDetails, score) {
-    this.params.progress = 'health';
+    this.results.progress = 'health';
     score.health = {};
 
     // Only http or https, no query string or spaces
@@ -260,23 +262,23 @@ class SiteEvaluator {
       .then(function(body) {
         // health check is awesome!
         score.total += 20;
-        jsonStatus(score, body, 'UP');
-        return Promise.resolve(true);
+        jsonStatus(score, body);
+        return Promise.resolve(score);
       })
       .catch(function(err) {
         score.health.failed = true;
-        if ( !err.response ) {
-          score.health.error = handleError(err);
+        if ( err.statusCode ) {
+          score.health.statusCode = err.statusCode;
+          score.health.error = err.statusMessage;
+          jsonStatus(score, err.body);
         } else {
-          score.health.statusCode = err.response.statusCode;
-          score.health.statusMessage = err.response.statusMessage;
-          jsonStatus(score, err.response.body, 'DOWN');
+          score.health.error = err.message;
         }
-        return Promise.resolve(true);
+        return Promise.resolve(score);
       });
     }
 
-    return Promise.resolve(true);
+    return Promise.resolve(score);
   }
 
   /*
@@ -285,8 +287,8 @@ class SiteEvaluator {
    */
   checkWebSocket(connectionDetails, score) {
     let self = this;
-    let id = this.params.site._id || 'id';
-    this.params.progress = 'target';
+    let id = this.results.site._id || 'id';
+    this.results.progress = 'target';
 
     if ( !!connectionDetails.target ) {
       score.target = {};
@@ -305,7 +307,7 @@ class SiteEvaluator {
 
         // Try connection, test room
         let roomClient = new RoomClient(id, url, score.target.token);
-        return roomClient.tryRoom(self.params);
+        return roomClient.tryRoom(self.results);
       }
     } else {
       // no points, indicate that it wasn't here to test
@@ -314,41 +316,33 @@ class SiteEvaluator {
       };
     }
 
-    return Promise.resolve(self.params);
+    return Promise.resolve(score);
   }
 
   totalScore() {
-    let results = this.params.score || {};
+    let score = this.results.score || {};
 
     // Grand total
     let total = 0;
-    let values = Object.values(results);
+    let values = Object.values(score);
     for(let i  = 0; i < values.length; i++ ) {
       if ( values[i] && values[i].total ) {
         total += parseInt(values[i].total); // force number
       }
     }
-    results._id = this.params.site._id;
-    results.total = total;
+    score._id = this.results.site._id;
+    score.total = total;
 
     // Copy extras into the result.
-    results.marker = this.params.marker;
-    results.path = this.params.path;
-    results.type = this.params.site.type;
+    score.marker = this.results.marker;
+    score.path = this.results.path;
+    score.type = this.results.site.type;
 
-    const name = this.params.site.info ? this.params.site.info.name : results._id;
+    const name = this.results.site.info ? this.results.site.info.name : score._id;
 
     console.log(`RACK THEM UP! ${name} has earned ${total} points`);
-    return Promise.resolve(results);
+    return Promise.resolve(score);
   }
-}
-
-function handleError(error) {
-  console.log("Request error: " + error);
-  if ( error.message ) {
-    return error.message;
-  }
-  return error;
 }
 
 function retry(options, get, interval) {
@@ -363,6 +357,8 @@ function retry(options, get, interval) {
       } else if ( err.response.statusCode === 503 && get.attempts < 3 ) {
         get.attempts++;
         return Promise.delay(interval).then(try_once);
+      } else {
+        return Promise.reject(err.response);
       }
     });
   }
@@ -375,11 +371,6 @@ function jsonStatus(score, body, match) {
     let health = JSON.parse(body);
     score.health.json = true;
     score.total += 5; // valid json
-
-    score.health.status = health.status;
-    if ( match === health.status ) {
-      score.total += 5; // status: DOWN
-    }
   }
   catch(parseErr) {
     score.health.json = false;

@@ -25,18 +25,17 @@ var port = 3000;
 var server;
 
 function verifyResult(result, total) {
-  // console.log(JSON.stringify(result.score));
-  should.exist(result.site);
-  should.exist(result.score.endpoint);
-  should.exist(result.score.endpoint.total);
-  should.equal(result.score.endpoint.total, total, 'Should have the expected number of points');
+  // should.exist(result.site);
+  should.exist(result);
+  should.exist(result.total);
+  should.equal(result.total, total, 'Should have the expected number of points');
 }
 
 function verifyHealthResult(result, total) {
   verifyResult(result, total);
-  (result.score.endpoint.empty).should.be.false();
-  should.exist(result.score.endpoint.health);
-  (result.score.endpoint.health.valid).should.be.true();
+  (result.empty).should.be.false();
+  should.exist(result.health);
+  (result.health.valid).should.be.true();
 }
 
 describe('checkEndpoint', function() {
@@ -62,7 +61,7 @@ describe('checkEndpoint', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkEndpoint().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.score.endpoint.empty).should.be.true();
+      (result.empty).should.be.true();
     });
   });
 
@@ -73,7 +72,7 @@ describe('checkEndpoint', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkEndpoint().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.score.endpoint.empty).should.be.true();
+      (result.empty).should.be.true();
     });
   });
 
@@ -83,8 +82,8 @@ describe('checkEndpoint', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkEndpoint().then(function(result) {
       verifyResult(result, 0); // no points
-      should.exist(result.score.endpoint.health);
-      (result.score.endpoint.health.valid).should.be.false();
+      should.exist(result.health);
+      (result.health.valid).should.be.false();
     });
   });
 
@@ -99,9 +98,9 @@ describe('checkEndpoint', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkEndpoint().then(function(result) {
       verifyHealthResult(result, 5); // health check url (5)
-      should.exist(result.score.endpoint.health.statusCode);
-      should.equal(result.score.endpoint.health.statusCode, 404, 'Expected 404');
-      should.exist(result.score.endpoint.health.statusMessage);
+      should.exist(result.health.statusCode);
+      should.equal(result.health.statusCode, 404, 'Expected 404');
+      should.exist(result.health.error);
     });
   });
 
@@ -117,10 +116,10 @@ describe('checkEndpoint', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkEndpoint().then(function(result) {
       verifyHealthResult(result, 5);  // health check url (5)
-      should.equal(result.score.endpoint.health.attempts, 3, 'Should have retried 3 times');
-      should.exist(result.score.endpoint.health.statusCode);
-      should.equal(result.score.endpoint.health.statusCode, 503, 'Expected 503');
-      should.exist(result.score.endpoint.health.statusMessage);
+      should.equal(result.health.attempts, 3, 'Should have retried 3 times');
+      should.exist(result.health.statusCode);
+      should.equal(result.health.statusCode, 503, 'Expected 503');
+      should.exist(result.health.error);
     });
   });
 
@@ -135,9 +134,9 @@ describe('checkEndpoint', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkEndpoint(params).then(function(result) {
       verifyHealthResult(result, 25);  // health check url (5), Good response (20)
-      should.not.exist(result.score.endpoint.health.statusCode);
-      should.not.exist(result.score.endpoint.health.statusMessage);
-      (result.score.endpoint.health.json).should.be.false();
+      should.not.exist(result.health.statusCode);
+      should.not.exist(result.health.error);
+      (result.health.json).should.be.false();
     });
   });
 
@@ -151,10 +150,10 @@ describe('checkEndpoint', function() {
 
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkEndpoint(params).then(function(result) {
-      verifyHealthResult(result, 35);  // health check url (5), Good response (20), JSON (5), UP (5)
-      should.not.exist(result.score.endpoint.health.statusCode);
-      should.not.exist(result.score.endpoint.health.statusMessage);
-      (result.score.endpoint.health.json).should.be.true();
+      verifyHealthResult(result, 30);  // health check url (5), Good response (20), JSON (5)
+      should.not.exist(result.health.statusCode);
+      should.not.exist(result.health.error);
+      (result.health.json).should.be.true();
     });
   });
 
@@ -162,17 +161,17 @@ describe('checkEndpoint', function() {
     params.site = jsonBody.health_url('http://localhost:3000/fail-json/');
 
     app.get('/fail-json/', function (req, res) {
-      res.status(503)
+      res.status(500)
          .send('{"status": "DOWN"}');
     });
 
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkEndpoint(params).then(function(result) {
-      verifyHealthResult(result, 15);  // health check url (5), JSON (5), DOWN (5)
-      should.exist(result.score.endpoint.health.statusCode);
-      should.equal(result.score.endpoint.health.statusCode, 503, 'Expected 503');
-      should.exist(result.score.endpoint.health.statusMessage);
-      (result.score.endpoint.health.json).should.be.true();
+      verifyHealthResult(result, 10);  // health check url (5), JSON (5)
+      should.exist(result.health.statusCode);
+      should.equal(result.health.statusCode, 500, 'Expected 500');
+      should.exist(result.health.error);
+      (result.health.json).should.be.true();
     });
   });
 });

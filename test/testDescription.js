@@ -21,11 +21,12 @@ const jsonBody = require('./commonJson.js');
 var rp = require('request-promise');
 
 function verifyResult(result, total) {
-  // console.log(JSON.stringify(result.score));
-  should.exist(result.site);
-  should.exist(result.score.info);
-  should.exist(result.score.info.total);
-  should.equal(result.score.info.total, total, 'Should have the expected number of points');
+//  console.log(result);
+  should.exist(result.total);
+  should.equal(result.total, total, 'Should have the expected number of points');
+  if ( total >= 0 ) {
+    should.exist(result.checked);
+  }
 }
 
 describe('checkDescription', function() {
@@ -48,7 +49,7 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.score.info.nameDefined).should.be.false();
+      (result.nameDefined).should.be.false();
     });
   });
 
@@ -58,10 +59,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 0); // no points
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.false();
-      should.equal(result.score.info.description, 'none');
-      should.equal(result.score.info.doors, 'none');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.false();
+      should.equal(result.description, 'none');
+      should.equal(result.doors, 'none');
     });
   });
 
@@ -71,10 +72,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 5); // full name (5), no description, no doors
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.true();
-      should.equal(result.score.info.description, 'none');
-      should.equal(result.score.info.doors, 'none');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.true();
+      should.equal(result.description, 'none');
+      should.equal(result.doors, 'none');
     });
   });
 
@@ -84,10 +85,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 6); // full name (5), one-word description (5)
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.true();
-      should.equal(result.score.info.description, '1 word');
-      should.equal(result.score.info.doors, 'none');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.true();
+      should.equal(result.description, '1 word');
+      should.equal(result.doors, 'none');
     });
   });
 
@@ -97,10 +98,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 6); // full name (5), one-word description (5)
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.true();
-      should.equal(result.score.info.description, '1 word');
-      should.equal(result.score.info.doors, 'none');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.true();
+      should.equal(result.description, '1 word');
+      should.equal(result.doors, 'none');
     });
   });
 
@@ -110,10 +111,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 11); // full name (5), 6 word description (6)
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.true();
-      should.equal(result.score.info.description, '6 words');
-      should.equal(result.score.info.doors, 'none');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.true();
+      should.equal(result.description, '6 words');
+      should.equal(result.doors, 'none');
     });
   });
 
@@ -123,10 +124,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 6); // full name (5), no description, one door
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.true();
-      should.equal(result.score.info.description, 'none');
-      should.equal(result.score.info.doors, '1 unique door');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.true();
+      should.equal(result.description, 'none');
+      should.equal(result.doors, '1 unique door');
     });
   });
 
@@ -136,10 +137,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 6); // full name (5), no description, one unique door
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.true();
-      should.equal(result.score.info.description, 'none');
-      should.equal(result.score.info.doors, '1 unique door');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.true();
+      should.equal(result.description, 'none');
+      should.equal(result.doors, '1 unique door');
     });
   });
 
@@ -149,10 +150,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 7); // full name (5), no description, two unique doors (2)
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.true();
-      should.equal(result.score.info.description, 'none');
-      should.equal(result.score.info.doors, '2 unique doors');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.true();
+      should.equal(result.description, 'none');
+      should.equal(result.doors, '2 unique doors');
     });
   });
 
@@ -162,10 +163,10 @@ describe('checkDescription', function() {
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
       verifyResult(result, 10); // full name (5), no description, five unique doors (5)
-      (result.score.info.nameDefined).should.be.true();
-      (result.score.info.fullName).should.be.true();
-      should.equal(result.score.info.description, 'none');
-      should.equal(result.score.info.doors, '5 unique doors');
+      (result.nameDefined).should.be.true();
+      (result.fullName).should.be.true();
+      should.equal(result.description, 'none');
+      should.equal(result.doors, '5 unique doors');
     });
   });
 
@@ -174,7 +175,7 @@ describe('checkDescription', function() {
 
     let evaluator = new SiteEvaluator(params);
     return evaluator.checkDescription().then(function(result) {
-      should.exist(result.path);
+      should.exist(evaluator.results.path);
     });
   });
 });

@@ -22,11 +22,10 @@ const dummy = require('./dummyRoom.js');
 const jsonBody = require('./commonJson.js');
 
 function verifyResult(result, total) {
-  // console.log(JSON.stringify(result.score));
-  should.exist(result.site);
-  should.exist(result.score.endpoint);
-  should.exist(result.score.endpoint.total);
-  should.equal(result.score.endpoint.total, total, 'Should have the expected number of points');
+  //console.log(result);
+  should.exist(result);
+  should.exist(result.total);
+  should.equal(result.total, total, 'Should have the expected number of points');
 }
 
 describe('checkRoom', function() {
@@ -41,8 +40,8 @@ describe('checkRoom', function() {
     return evaluator.checkEndpoint()
     .then(function(result) {
       verifyResult(result, 0); // no points
-      should.exist(result.score.endpoint.target);
-      (result.score.endpoint.target.valid).should.be.false();
+      should.exist(result.target);
+      (result.target.valid).should.be.false();
     });
   });
 
@@ -54,8 +53,8 @@ describe('checkRoom', function() {
     return evaluator.checkEndpoint()
     .then(function(result) {
       verifyResult(result, 10); // 10 points
-      should.exist(result.score.endpoint.target);
-      (result.score.endpoint.target.valid).should.be.true();
+      should.exist(result.target);
+      (result.target.valid).should.be.true();
     });
   });
 
@@ -67,8 +66,8 @@ describe('checkRoom', function() {
     return evaluator.checkEndpoint()
     .then(function(result) {
       verifyResult(result, 1070); // 1070 points
-      should.exist(result.score.endpoint.target);
-      (result.score.endpoint.target.valid).should.be.true();
+      should.exist(result.target);
+      (result.target.valid).should.be.true();
     });
   });
 });

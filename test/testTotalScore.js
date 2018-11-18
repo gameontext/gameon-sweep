@@ -19,7 +19,7 @@ const SiteEvaluator = require('../src/SiteEvaluator.js');
 const jsonBody = require('./commonJson.js');
 
 function verifyScore(result, total) {
-  // console.log(JSON.stringify(result.score));
+  //console.log(result);
   should.exist(result.total);
   should.equal(result.total, total, 'Should have the expected number of points');
 }
@@ -29,9 +29,8 @@ describe('totalScore', function() {
   params.site = { info: { name: 'test '} };
 
   it('should return 0 for empty result', function() {
-    let evaluator = new SiteEvaluator(params);
-    let finalScore = evaluator.totalScore();
-    verifyScore(finalScore, 0);
+    new SiteEvaluator(params).totalScore()
+    .then((total) => { verifyScore(total, 0) });
   });
 
   it('should sum results from multiple sections', function() {
@@ -41,9 +40,8 @@ describe('totalScore', function() {
       info2: { total: 1 },
       info3: { total: 1 }
     }
-    let evaluator = new SiteEvaluator(params);
-    let finalScore = evaluator.totalScore();
-    verifyScore(finalScore, 4);
+    new SiteEvaluator(params).totalScore()
+    .then((total) => { verifyScore(total, 4); });
   });
 
   it('should skip sections without totals', function() {
@@ -53,9 +51,8 @@ describe('totalScore', function() {
       info2: { total: 1 },
       info3: { total: 1 }
     }
-    let evaluator = new SiteEvaluator(params);
-    let finalScore = evaluator.totalScore();
-    verifyScore(finalScore, 3);
+    new SiteEvaluator(params).totalScore()
+    .then((total) => { verifyScore(total, 3); });
   });
 
 });

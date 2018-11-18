@@ -16,7 +16,6 @@
 const SweepActions = require('./SweepActions.js');
 
 function invoke (params) {
-  console.log(params.site);
   return new SweepActions(params).evaluate()
   .catch((err) => {
     console.log("error", JSON.stringify(err, null, 2));

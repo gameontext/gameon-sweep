@@ -65,7 +65,6 @@ class ScoreBook {
       // return  inserted score
       return this.scoreDb.insert(score)
       .then(() => {
-        console.log("OK");
         return Promise.resolve({
           marker: marker,
           id: score._id,
@@ -75,7 +74,6 @@ class ScoreBook {
       })
     })
     .catch((error) => {
-      console.log("ERROR");
       if ( error.statusCode === 404 ) {
         return Promise.resolve({
           marker: marker,
@@ -170,11 +168,12 @@ class ScoreBook {
     };
 
     // iterate by ascending score..
-    for(let i; i < scores.length; i++) {
+    for(let i = 0; i < scores.length; i++) {
       let score1 = scores[i];
 
       // ignore empty rooms when calculating stats
       if ( result.median === 0  && score1.key >= 0 ) {
+        console.log("low score", i, score1);
         result.low = score1.key; // first non-empty room
         result.non_empty = scores.length - i +1;
         console.log("scores.length", scores.length);
