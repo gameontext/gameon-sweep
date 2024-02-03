@@ -34,8 +34,8 @@
     "nano": "^7.1.0",
     "object.values": "^1.0.4",
     "openwhisk": "^3.7.0",
-    "request": "^2.82.0",
-    "request-promise": "^4.2.2",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6",
     "ws": "^6.1.0"
   }
 }
